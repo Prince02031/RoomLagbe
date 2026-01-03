@@ -1,9 +1,9 @@
-import { SavedSearchModel } from '../models/savedSearch.model.js';
+import { SavedSearchService } from '../services/savedSearch.service.js';
 
 export const SavedSearchController = {
   create: async (req, res, next) => {
     try {
-      const savedSearch = await SavedSearchModel.create(req.user.id, req.body);
+      const savedSearch = await SavedSearchService.createSavedSearch(req.user.id, req.body);
       res.status(201).json(savedSearch);
     } catch (err) {
       next(err);
@@ -12,8 +12,17 @@ export const SavedSearchController = {
 
   getMySavedSearches: async (req, res, next) => {
     try {
-      const searches = await SavedSearchModel.findByUser(req.user.id);
+      const searches = await SavedSearchService.getSavedSearchesForUser(req.user.id);
       res.json(searches);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  delete: async (req, res, next) => {
+    try {
+      await SavedSearchService.deleteSavedSearch(req.params.id, req.user.id);
+      res.status(204).send();
     } catch (err) {
       next(err);
     }

@@ -36,5 +36,21 @@ export const BookingModel = {
     `;
     const { rows } = await pool.query(query, [ownerId]);
     return rows;
+  },
+
+  findById: async (id) => {
+    const { rows } = await pool.query('SELECT * FROM BOOKING WHERE booking_id = $1', [id]);
+    return rows[0];
+  },
+
+  rejectAllPendingForListing: async (listingId, exceptBookingId) => {
+    const query = `
+      UPDATE BOOKING 
+      SET status = 'Rejected' 
+      WHERE listing_id = $1 
+      AND status = 'Pending' 
+      AND booking_id != $2;
+    `;
+    await pool.query(query, [listingId, exceptBookingId]);
   }
 };

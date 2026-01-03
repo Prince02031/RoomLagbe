@@ -6,5 +6,8 @@ const router = Router();
 
 router.post('/', authenticate, authorize(['Owner']), RoomController.create);
 router.get('/apartment/:apartmentId', authenticate, RoomController.getByApartment);
+router.get('/:id', authenticate, RoomController.getById);
+router.put('/:id', authenticate, authorize(['Owner']), RoomController.update);
+router.delete('/:id', authenticate, authorize(['Owner']), RoomController.delete);
 
 export default router;

@@ -20,5 +20,19 @@ export const ApartmentModel = {
       `SELECT * FROM APARTMENT WHERE owner_id = $1`, [ownerId]
     );
     return rows;
+  },
+
+  findById: async (id) => {
+    const { rows } = await pool.query(
+      `SELECT * FROM APARTMENT WHERE apartment_id = $1`, [id]
+    );
+    return rows[0];
+  },
+
+  findByLocation: async (locationId) => {
+    const { rows } = await pool.query(
+      `SELECT * FROM APARTMENT WHERE location_id = $1`, [locationId]
+    );
+    return rows;
   }
 };

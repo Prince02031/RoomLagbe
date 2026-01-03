@@ -1,10 +1,10 @@
-import { BookingModel } from '../models/booking.model.js';
+import { BookingService } from '../services/booking.service.js';
 
 export const BookingController = {
   create: async (req, res, next) => {
     try {
       const bookingData = { ...req.body, student_id: req.user.id };
-      const booking = await BookingModel.create(bookingData);
+      const booking = await BookingService.createBooking(bookingData);
       res.status(201).json(booking);
     } catch (err) {
       next(err);
@@ -13,8 +13,11 @@ export const BookingController = {
 
   updateStatus: async (req, res, next) => {
     try {
-      const { status } = req.body; // 'Approved' or 'Rejected'
-      const booking = await BookingModel.updateStatus(req.params.id, status);
+      const { status } = req.body;
+      const { id: bookingId } = req.params;
+      const userId = req.user.id;
+      
+      const booking = await BookingService.updateBookingStatus(bookingId, status, userId);
       res.json(booking);
     } catch (err) {
       next(err);
@@ -23,7 +26,7 @@ export const BookingController = {
 
   getMyBookings: async (req, res, next) => {
     try {
-      const bookings = await BookingModel.findByStudent(req.user.id);
+      const bookings = await BookingService.getBookingsByStudent(req.user.id);
       res.json(bookings);
     } catch (err) {
       next(err);
@@ -32,7 +35,7 @@ export const BookingController = {
 
   getOwnerBookings: async (req, res, next) => {
     try {
-      const bookings = await BookingModel.findByOwner(req.user.id);
+      const bookings = await BookingService.getBookingsByOwner(req.user.id);
       res.json(bookings);
     } catch (err) {
       next(err);

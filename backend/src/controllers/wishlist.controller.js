@@ -1,11 +1,17 @@
-import { WishlistModel } from '../models/wishlist.model.js';
+import { WishlistService } from '../services/wishlist.service.js';
 
 export const WishlistController = {
   add: async (req, res, next) => {
     try {
       const { listingId } = req.body;
-      const item = await WishlistModel.add(req.user.id, listingId);
-      res.status(201).json(item);
+      const item = await WishlistService.addToWishlist(req.user.id, listingId);
+      // If the item was already in the wishlist, the model returns nothing.
+      // We can respond with a success or the created item.
+      if (item) {
+        res.status(201).json(item);
+      } else {
+        res.status(200).json({ message: 'Item already in wishlist.' });
+      }
     } catch (err) {
       next(err);
     }
@@ -13,7 +19,7 @@ export const WishlistController = {
 
   remove: async (req, res, next) => {
     try {
-      await WishlistModel.remove(req.user.id, req.params.listingId);
+      await WishlistService.removeFromWishlist(req.user.id, req.params.listingId);
       res.status(204).send();
     } catch (err) {
       next(err);
@@ -22,7 +28,7 @@ export const WishlistController = {
 
   getMyWishlist: async (req, res, next) => {
     try {
-      const wishlist = await WishlistModel.getByUser(req.user.id);
+      const wishlist = await WishlistService.getWishlistForUser(req.user.id);
       res.json(wishlist);
     } catch (err) {
       next(err);
@@ -31,7 +37,7 @@ export const WishlistController = {
 
   getTopWishlisted: async (req, res, next) => {
     try {
-      const top = await WishlistModel.getTopWishlisted();
+      const top = await WishlistService.getTopWishlistedListings();
       res.json(top);
     } catch (err) {
       next(err);

@@ -1,10 +1,10 @@
-import { ApartmentModel } from '../models/apartment.model.js';
+import { ApartmentService } from '../services/apartment.service.js';
 
 export const ApartmentController = {
   create: async (req, res, next) => {
     try {
       const apartmentData = { ...req.body, owner_id: req.user.id };
-      const apartment = await ApartmentModel.create(apartmentData);
+      const apartment = await ApartmentService.create(apartmentData);
       res.status(201).json(apartment);
     } catch (err) {
       next(err);
@@ -13,7 +13,7 @@ export const ApartmentController = {
 
   getMyApartments: async (req, res, next) => {
     try {
-      const apartments = await ApartmentModel.findByOwner(req.user.id);
+      const apartments = await ApartmentService.getApartmentsByOwner(req.user.id);
       res.json(apartments);
     } catch (err) {
       next(err);
@@ -22,8 +22,8 @@ export const ApartmentController = {
 
   getById: async (req, res, next) => {
     try {
-      const apartment = await pool.query('SELECT * FROM APARTMENT WHERE apartment_id = $1', [req.params.id]);
-      res.json(apartment.rows[0]);
+      const apartment = await ApartmentService.getApartmentById(req.params.id);
+      res.json(apartment);
     } catch (err) {
       next(err);
     }

@@ -1,12 +1,16 @@
-import { Router } from 'express';
+import express from 'express';
 import { ListingController } from '../controllers/listing.controller.js';
-import { authenticate, authorize } from '../middlewares/auth.middleware.js';
+import { authenticate } from '../middlewares/auth.middleware.js';
 
-const router = Router();
+const router = express.Router();
 
-router.get('/', ListingController.getAll); // Handles search filters
+// Public routes
+router.get('/', ListingController.getAll);
 router.get('/:id', ListingController.getById);
-router.post('/', authenticate, authorize(['Owner', 'Student']), ListingController.create);
-router.post('/:id/photos', authenticate, authorize(['Owner', 'Student']), ListingController.addPhotos);
+
+// Protected routes (require login)
+router.post('/', authenticate, ListingController.create);
+router.put('/:id', authenticate, ListingController.update);
+router.post('/photos', authenticate, ListingController.addPhotos);
 
 export default router;

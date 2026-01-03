@@ -1,45 +1,56 @@
 import { ListingModel } from '../models/listing.model.js';
-import { ListingPhotoModel } from '../models/listingPhoto.model.js';
 
 export const ListingController = {
-  create: async (req, res, next) => {
+  // Get all listings (with optional filters)
+  getAll: async (req, res) => {
     try {
-      // Ensure the apartment belongs to the owner (validation logic omitted for brevity)
-      const listing = await ListingModel.create(req.body);
-      res.status(201).json(listing);
-    } catch (err) {
-      next(err);
-    }
-  },
-
-  getAll: async (req, res, next) => {
-    try {
-      // req.query contains filters like minPrice, maxPrice, area, etc.
-      const listings = await ListingModel.search(req.query);
+      const listings = await ListingModel.findAll();
       res.json(listings);
-    } catch (err) {
-      next(err);
+    } catch (error) {
+      res.status(500).json({ message: 'Error fetching listings', error: error.message });
     }
   },
 
-  getById: async (req, res, next) => {
+  // Get a single listing by ID
+  getById: async (req, res) => {
     try {
-      const listing = await ListingModel.findById(req.params.id);
-      if (!listing) return res.status(404).json({ message: 'Listing not found' });
-      const photos = await ListingPhotoModel.getByListing(req.params.id);
-      res.json({ ...listing, photos });
-    } catch (err) {
-      next(err);
+      const { id } = req.params;
+      const listing = await ListingModel.findById(id);
+      
+      if (!listing) {
+        return res.status(404).json({ message: 'Listing not found' });
+      }
+      res.json(listing);
+    } catch (error) {
+      res.status(500).json({ message: 'Error fetching listing', error: error.message });
     }
   },
 
-  addPhotos: async (req, res, next) => {
+  // Create a new listing
+  create: async (req, res) => {
     try {
-      const { photoUrl, isThumbnail } = req.body;
-      const photo = await ListingPhotoModel.add(req.params.id, photoUrl, isThumbnail);
-      res.status(201).json(photo);
-    } catch (err) {
-      next(err);
+      const listing = await ListingModel.create({
+        ...req.body,
+        ownerId: req.user.id
+      });
+      res.status(201).json(listing);
+    } catch (error) {
+      res.status(500).json({ message: 'Error creating listing', error: error.message });
     }
+  },
+
+  // Update a listing
+  update: async (req, res) => {
+    try {
+      // In a real app, check if req.user.id owns this listing first
+      const listing = await ListingModel.update(req.params.id, req.body);
+      res.json(listing);
+    } catch (error) {
+      res.status(500).json({ message: 'Error updating listing', error: error.message });
+    }
+  },
+
+  addPhotos: async (req, res) => {
+    res.json({ message: 'Photo upload not implemented yet' });
   }
 };

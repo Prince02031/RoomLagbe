@@ -3,7 +3,7 @@ import { pool } from '../config/db.js';
 export const ListingPhotoModel = {
   add: async (listingId, photoUrl, isThumbnail = false) => {
     const query = `
-      INSERT INTO LISTING_PHOTO (listing_id, photo_url, is_thumbnail)
+      INSERT INTO listing_photos (listing_id, photo_url, is_thumbnail)
       VALUES ($1, $2, $3)
       RETURNING *;
     `;
@@ -12,7 +12,7 @@ export const ListingPhotoModel = {
   },
 
   getByListing: async (listingId) => {
-    const { rows } = await pool.query(`SELECT * FROM LISTING_PHOTO WHERE listing_id = $1`, [listingId]);
+    const { rows } = await pool.query(`SELECT * FROM listing_photos WHERE listing_id = $1`, [listingId]);
     return rows;
   }
 };

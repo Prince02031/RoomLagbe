@@ -18,5 +18,18 @@ export const SavedSearchModel = {
     `;
     const { rows } = await pool.query(query, [userId]);
     return rows;
+  },
+
+  findById: async (id) => {
+    const { rows } = await pool.query(
+      `SELECT * FROM SAVED_SEARCH WHERE saved_search_id = $1`, [id]
+    );
+    return rows[0];
+  },
+
+  remove: async (id) => {
+    await pool.query(
+      `DELETE FROM SAVED_SEARCH WHERE saved_search_id = $1`, [id]
+    );
   }
 };
