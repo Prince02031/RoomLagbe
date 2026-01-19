@@ -208,3 +208,7 @@ export const mockAnalyticsData = {
   totalListings: 85,
   totalUsers: 342,
 };
+
+// Export definitions to satisfy imports in components
+export class Apartment {}
+export class RoomShareListing {}

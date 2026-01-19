@@ -1,9 +1,7 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import '../styles/index.css';
 import { AppProvider } from './context/AppContext';
 import { Toaster } from './components/ui/sonner';
+
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import SearchPage from './pages/SearchPage';
@@ -41,9 +39,3 @@ export default function App() {
     </BrowserRouter>
   );
 }
-
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
