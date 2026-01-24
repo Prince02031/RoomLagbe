@@ -1,14 +1,66 @@
-import React, { createContext, useContext, useState } from 'react';
-import { mockCurrentUser } from '../lib/mockData';
-
-
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import authService from '../services/auth.service';
 
 const AppContext = createContext(undefined);
 
 export function AppProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState(mockCurrentUser);
+  // Initialize user from localStorage if available
+  const [currentUser, setCurrentUser] = useState(() => {
+    return authService.getCurrentUser();
+  });
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return authService.isAuthenticated();
+  });
   const [wishlist, setWishlist] = useState([]);
   const [savedSearches, setSavedSearches] = useState([]);
+
+  // Sync authentication state
+  useEffect(() => {
+    const user = authService.getCurrentUser();
+    const authenticated = authService.isAuthenticated();
+    setCurrentUser(user);
+    setIsAuthenticated(authenticated);
+  }, []);
+
+  /**
+   * Login handler
+   * @param {string} username
+   * @param {string} password
+   * @returns {Promise<Object>} Login response
+   */
+  const login = async (username, password) => {
+    try {
+      const response = await authService.login(username, password);
+      setCurrentUser(response.user);
+      setIsAuthenticated(true);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  /**
+   * Register handler
+   * @param {Object} userData - Registration data
+   * @returns {Promise<Object>} Registration response
+   */
+  const register = async (userData) => {
+    try {
+      const response = await authService.register(userData);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  /**
+   * Logout handler
+   */
+  const logout = () => {
+    authService.logout();
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+  };
 
   const addToWishlist = (item) => {
     setWishlist((prev) => [...prev, item]);
@@ -35,6 +87,10 @@ export function AppProvider({ children }) {
       value={{
         currentUser,
         setCurrentUser,
+        isAuthenticated,
+        login,
+        register,
+        logout,
         wishlist,
         addToWishlist,
         removeFromWishlist,

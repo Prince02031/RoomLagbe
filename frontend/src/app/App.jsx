@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import { Toaster } from './components/ui/sonner';
+import ProtectedRoute from './components/ProtectedRoute';
 
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
@@ -20,17 +21,71 @@ export default function App() {
       <AppProvider>
         <div className="min-h-screen bg-gray-50">
           <Routes>
+            {/* Public Routes */}
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/listing/:id" element={<ListingDetailsPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/create-listing" element={<CreateListingPage />} />
-            <Route path="/post-room-share" element={<PostRoomSharePage />} />
-            <Route path="/wishlist" element={<WishlistPage />} />
-            <Route path="/saved-searches" element={<SavedSearchesPage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
+
+            {/* Protected Routes */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/create-listing"
+              element={
+                <ProtectedRoute>
+                  <CreateListingPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/post-room-share"
+              element={
+                <ProtectedRoute>
+                  <PostRoomSharePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/wishlist"
+              element={
+                <ProtectedRoute>
+                  <WishlistPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/saved-searches"
+              element={
+                <ProtectedRoute>
+                  <SavedSearchesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/analytics"
+              element={
+                <ProtectedRoute>
+                  <AnalyticsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Catch-all redirect */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           <Toaster />
