@@ -8,15 +8,27 @@ export const ApartmentMetricsModel = {
    * @returns {Promise<object>} The created or updated metrics row.
    */
   createOrUpdate: async (metricsData) => {
-    const { apartment_id, fair_rent_score } = metricsData;
+    const { apartment_id, fair_rent_score, view_count, wishlist_count } = metricsData;
     const query = `
-      INSERT INTO APARTMENT_METRICS (apartment_id, fair_rent_score)
-      VALUES ($1, $2)
+      INSERT INTO apartment_metrics (apartment_id, fair_rent_score, view_count, wishlist_count)
+      VALUES ($1, $2, $3, $4)
       ON CONFLICT (apartment_id) 
-      DO UPDATE SET fair_rent_score = EXCLUDED.fair_rent_score
+      DO UPDATE SET 
+        fair_rent_score = COALESCE(EXCLUDED.fair_rent_score, apartment_metrics.fair_rent_score),
+        view_count = COALESCE(EXCLUDED.view_count, apartment_metrics.view_count),
+        wishlist_count = COALESCE(EXCLUDED.wishlist_count, apartment_metrics.wishlist_count),
+        last_calculated = now()
       RETURNING *;
     `;
-    const { rows } = await pool.query(query, [apartment_id, fair_rent_score]);
+    const { rows } = await pool.query(query, [apartment_id, fair_rent_score, view_count, wishlist_count]);
+    return rows[0];
+  },
+  
+  findByApartment: async (apartmentId) => {
+    const { rows } = await pool.query(
+      `SELECT * FROM apartment_metrics WHERE apartment_id = $1`,
+      [apartmentId]
+    );
     return rows[0];
   }
 };

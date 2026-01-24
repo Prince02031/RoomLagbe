@@ -18,4 +18,6 @@ const dbConfig = config.databaseUrl
 
 const pool = new Pool(dbConfig);
 
+// Export both named and default for compatibility
+export { pool };
 export default pool;

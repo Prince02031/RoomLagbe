@@ -3,7 +3,11 @@ import { ApartmentService } from '../services/apartment.service.js';
 export const ApartmentController = {
   create: async (req, res, next) => {
     try {
-      const apartmentData = { ...req.body, owner_id: req.user.id };
+      const apartmentData = { 
+        ...req.body, 
+        owner_id: req.user.id,
+        creator_role: req.user.role
+      };
       const apartment = await ApartmentService.create(apartmentData);
       res.status(201).json(apartment);
     } catch (err) {

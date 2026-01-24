@@ -29,6 +29,22 @@ export const ListingController = {
   // Create a new listing
   create: async (req, res) => {
     try {
+      const { listing_type } = req.body;
+      const userRole = req.user.role;
+
+      // Business rule validation
+      if (userRole === 'owner' && listing_type !== 'apartment') {
+        return res.status(403).json({ 
+          message: 'Owners can only create apartment listings (whole flat)' 
+        });
+      }
+
+      if (userRole === 'student' && listing_type !== 'room_share') {
+        return res.status(403).json({ 
+          message: 'Students can only create room_share listings (individual rooms)' 
+        });
+      }
+
       const listing = await ListingModel.create({
         ...req.body,
         ownerId: req.user.id

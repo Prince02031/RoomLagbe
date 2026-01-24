@@ -6,21 +6,21 @@ const router = Router();
 
 // Master Amenity List (GET for all, POST/DELETE for Admins)
 router.get('/', AmenityController.getAll);
-router.post('/', authenticate, authorize(['Admin']), AmenityController.create);
-router.delete('/:id', authenticate, authorize(['Admin']), AmenityController.delete);
+router.post('/', authenticate, authorize(['admin']), AmenityController.create);
+router.delete('/:id', authenticate, authorize(['admin']), AmenityController.delete);
 
 // Apartment-Amenity Associations (GET for all, POST/DELETE for Owners)
 router.get('/apartment/:apartmentId', AmenityController.getForApartment);
 router.post(
   '/apartment/:apartmentId/add/:amenityId',
   authenticate,
-  authorize(['Owner']),
+  authorize(['owner', 'student']),
   AmenityController.addToApartment
 );
 router.delete(
   '/apartment/:apartmentId/remove/:amenityId',
   authenticate,
-  authorize(['Owner']),
+  authorize(['owner', 'student']),
   AmenityController.removeFromApartment
 );
 
@@ -29,13 +29,13 @@ router.get('/room/:roomId', AmenityController.getForRoom);
 router.post(
   '/room/:roomId/add/:amenityId',
   authenticate,
-  authorize(['Owner']),
+  authorize(['student']),
   AmenityController.addToRoom
 );
 router.delete(
   '/room/:roomId/remove/:amenityId',
   authenticate,
-  authorize(['Owner']),
+  authorize(['student']),
   AmenityController.removeFromRoom
 );
 

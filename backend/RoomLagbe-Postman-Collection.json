@@ -1,0 +1,539 @@
+{
+  "info": {
+    "name": "RoomLagbe API",
+    "_postman_id": "roomlagbe-api-collection",
+    "description": "Complete API testing collection for RoomLagbe backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register Student",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"john_student\",\n  \"password\": \"password123\",\n  \"name\": \"John Doe\",\n  \"email\": \"john@student.com\",\n  \"phone\": \"+8801712345678\",\n  \"role\": \"student\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/register"
+          }
+        },
+        {
+          "name": "Register Owner",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"owner_kamal\",\n  \"password\": \"password123\",\n  \"name\": \"Kamal Ahmed\",\n  \"email\": \"kamal@owner.com\",\n  \"phone\": \"+8801812345678\",\n  \"role\": \"owner\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/register"
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('token', jsonData.token);",
+                  "    console.log('Token saved:', jsonData.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"john_student\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Locations",
+      "item": [
+        {
+          "name": "Get All Locations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/locations"
+          }
+        },
+        {
+          "name": "Create Location (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"area_name\": \"Mohammadpur\",\n  \"latitude\": 23.7653,\n  \"longitude\": 90.3584\n}"
+            },
+            "url": "{{baseUrl}}/locations"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Universities",
+      "item": [
+        {
+          "name": "Get All Universities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/universities"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Apartments",
+      "item": [
+        {
+          "name": "Create Apartment (Owner)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 23.9892,\n  \"longitude\": 90.4240,\n  \"area_name\": \"Hoichoi Goli\",\n  \"title\": \"Spacious 3BHK Apartment\",\n  \"description\": \"Beautiful apartment near IUT with all modern amenities\",\n  \"price_total\": 18000,\n  \"price_per_person\": 6000,\n  \"apartment_type\": \"3BHK\",\n  \"max_occupancy\": 3,\n  \"women_only\": false,\n  \"available_from\": \"2026-02-01\"\n}"
+            },
+            "url": "{{baseUrl}}/apartments"
+          }
+        },
+        {
+          "name": "Create Apartment (Student for Room Share)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 23.9905,\n  \"longitude\": 90.4230,\n  \"area_name\": \"Begum Rokeya Road\",\n  \"title\": \"3BHK Flat - Roommate Needed\",\n  \"description\": \"Looking for a roommate in my 3BHK flat near IUT\",\n  \"price_total\": 15000,\n  \"price_per_person\": 5000,\n  \"apartment_type\": \"3BHK\",\n  \"max_occupancy\": 3,\n  \"women_only\": false,\n  \"available_from\": \"2026-02-01\"\n}"
+            },
+            "url": "{{baseUrl}}/apartments"
+          }
+        },
+        {
+          "name": "Get My Apartments (Owner)",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/apartments/owner/me"
+          }
+        },
+        {
+          "name": "Get Apartment by ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/apartments/<apartment_uuid_here>"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rooms",
+      "item": [
+        {
+          "name": "Create Room (Student)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"apartment_id\": \"<apartment_uuid_here>\",\n  \"room_name\": \"Room 101\",\n  \"capacity\": 2,\n  \"price_per_person\": 5000,\n  \"women_only\": false\n}"
+            },
+            "url": "{{baseUrl}}/rooms"
+          }
+        },
+        {
+          "name": "Get Rooms by Apartment",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/rooms/apartment/<apartment_uuid_here>"
+          }
+        },
+        {
+          "name": "Get Room by ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/rooms/<room_uuid_here>"
+          }
+        },
+        {
+          "name": "Update Room (Student)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price_per_person\": 5500,\n  \"capacity\": 3\n}"
+            },
+            "url": "{{baseUrl}}/rooms/<room_uuid_here>"
+          }
+        },
+        {
+          "name": "Delete Room (Student)",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/rooms/<room_uuid_here>"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Listings",
+      "item": [
+        {
+          "name": "Get All Listings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/listings"
+          }
+        },
+        {
+          "name": "Get Listing by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/listings/<listing_uuid_here>"
+          }
+        },
+        {
+          "name": "Create Listing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"apartment_id\": \"<apartment_uuid_here>\",\n  \"listing_type\": \"apartment\",\n  \"price_per_person\": 6000,\n  \"women_only\": false\n}"
+            },
+            "url": "{{baseUrl}}/listings"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "Create Booking (Student)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listing_id\": \"<listing_uuid_here>\",\n  \"start_date\": \"2026-02-01\",\n  \"end_date\": \"2026-02-28\"\n}"
+            },
+            "url": "{{baseUrl}}/bookings"
+          }
+        },
+        {
+          "name": "Get My Bookings (Student)",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/bookings/student"
+          }
+        },
+        {
+          "name": "Get Owner Bookings",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/bookings/owner"
+          }
+        },
+        {
+          "name": "Update Booking Status (Owner)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"approved\"\n}"
+            },
+            "url": "{{baseUrl}}/bookings/<booking_uuid_here>/status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wishlist",
+      "item": [
+        {
+          "name": "Add to Wishlist (Student)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listingId\": \"<listing_uuid_here>\"\n}"
+            },
+            "url": "{{baseUrl}}/wishlist"
+          }
+        },
+        {
+          "name": "Get My Wishlist (Student)",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/wishlist"
+          }
+        },
+        {
+          "name": "Remove from Wishlist (Student)",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/wishlist/<listing_uuid_here>"
+          }
+        },
+        {
+          "name": "Get Top Wishlisted (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/wishlist/analytics/top"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Saved Searches",
+      "item": [
+        {
+          "name": "Create Saved Search (Student)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"criteria\": {\n    \"location\": \"Mohammadpur\",\n    \"minPrice\": 5000,\n    \"maxPrice\": 8000,\n    \"women_only\": false\n  }\n}"
+            },
+            "url": "{{baseUrl}}/saved-searches"
+          }
+        },
+        {
+          "name": "Get My Saved Searches (Student)",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/saved-searches"
+          }
+        },
+        {
+          "name": "Delete Saved Search (Student)",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/saved-searches/<saved_search_uuid_here>"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Get Pending Apartments",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/admin/apartments/pending"
+          }
+        },
+        {
+          "name": "Approve Apartment",
+          "request": {
+            "method": "PATCH",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/admin/apartments/<apartment_uuid_here>/approve"
+          }
+        },
+        {
+          "name": "Reject Apartment",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Property does not meet our standards\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/apartments/<apartment_uuid_here>/reject"
+          }
+        },
+        {
+          "name": "Get Pending Listings",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/admin/listings/pending"
+          }
+        },
+        {
+          "name": "Approve Listing",
+          "request": {
+            "method": "PATCH",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/admin/listings/<listing_uuid_here>/approve"
+          }
+        },
+        {
+          "name": "Reject Listing",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Listing information is incomplete\"\n}"
+            },
+            "url": "{{baseUrl}}/admin/listings/<listing_uuid_here>/reject"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Amenities",
+      "item": [
+        {
+          "name": "Get All Amenities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/amenities"
+          }
+        },
+        {
+          "name": "Create Amenity (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{token}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"WiFi\"\n}"
+            },
+            "url": "{{baseUrl}}/amenities"
+          }
+        },
+        {
+          "name": "Get Amenities for Apartment",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/amenities/apartment/<apartment_uuid_here>"
+          }
+        },
+        {
+          "name": "Add Amenity to Apartment (Owner/Student)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/amenities/apartment/<apartment_uuid_here>/add/<amenity_uuid_here>"
+          }
+        },
+        {
+          "name": "Remove Amenity from Apartment (Owner/Student)",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/amenities/apartment/<apartment_uuid_here>/remove/<amenity_uuid_here>"
+          }
+        },
+        {
+          "name": "Get Amenities for Room",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/amenities/room/<room_uuid_here>"
+          }
+        },
+        {
+          "name": "Add Amenity to Room (Student)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/amenities/room/<room_uuid_here>/add/<amenity_uuid_here>"
+          }
+        },
+        {
+          "name": "Remove Amenity from Room (Student)",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/amenities/room/<room_uuid_here>/remove/<amenity_uuid_here>"
+          }
+        }
+      ]
+    }
+  ]
+}

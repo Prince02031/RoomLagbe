@@ -11,7 +11,12 @@ export const authenticate = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
-    req.user = decoded; // { id, role, ... }
+    // Support both id and user_id for backward compatibility
+    req.user = {
+      ...decoded,
+      id: decoded.user_id || decoded.id,
+      user_id: decoded.user_id || decoded.id
+    };
     next();
   } catch (err) {
     return res.status(403).json({ message: 'Invalid or expired token' });

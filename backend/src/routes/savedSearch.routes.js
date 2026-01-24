@@ -4,8 +4,8 @@ import { authenticate, authorize } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
-router.post('/', authenticate, authorize(['Student']), SavedSearchController.create);
-router.get('/', authenticate, authorize(['Student']), SavedSearchController.getMySavedSearches);
-router.delete('/:id', authenticate, authorize(['Student']), SavedSearchController.delete);
+router.post('/', authenticate, authorize(['student']), SavedSearchController.create);
+router.get('/', authenticate, authorize(['student']), SavedSearchController.getMySavedSearches);
+router.delete('/:id', authenticate, authorize(['student']), SavedSearchController.delete);
 
 export default router;

@@ -3,7 +3,7 @@ import { pool } from '../config/db.js';
 export const SavedSearchModel = {
   create: async (userId, searchCriteria) => {
     const query = `
-      INSERT INTO SAVED_SEARCH (user_id, criteria)
+      INSERT INTO saved_search (user_id, criteria)
       VALUES ($1, $2)
       RETURNING *;
     `;
@@ -14,7 +14,7 @@ export const SavedSearchModel = {
 
   findByUser: async (userId) => {
     const query = `
-      SELECT * FROM SAVED_SEARCH WHERE user_id = $1 ORDER BY created_at DESC
+      SELECT * FROM saved_search WHERE user_id = $1 ORDER BY created_at DESC
     `;
     const { rows } = await pool.query(query, [userId]);
     return rows;
@@ -22,14 +22,14 @@ export const SavedSearchModel = {
 
   findById: async (id) => {
     const { rows } = await pool.query(
-      `SELECT * FROM SAVED_SEARCH WHERE saved_search_id = $1`, [id]
+      `SELECT * FROM saved_search WHERE saved_search_id = $1`, [id]
     );
     return rows[0];
   },
 
   remove: async (id) => {
     await pool.query(
-      `DELETE FROM SAVED_SEARCH WHERE saved_search_id = $1`, [id]
+      `DELETE FROM saved_search WHERE saved_search_id = $1`, [id]
     );
   }
 };

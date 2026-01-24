@@ -43,7 +43,12 @@ const verifyOwnershipByApartment = async (apartmentId, userId) => {
 export const RoomService = {
   createRoom: async (roomData, userId) => {
     await verifyOwnershipByApartment(roomData.apartment_id, userId);
-    return await RoomModel.create(roomData);
+    // Set the student ID from the authenticated user
+    const roomDataWithStudent = {
+      ...roomData,
+      std_id: userId
+    };
+    return await RoomModel.create(roomDataWithStudent);
   },
 
   getRoomsByApartment: async (apartmentId) => {

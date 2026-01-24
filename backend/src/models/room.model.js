@@ -3,13 +3,17 @@ import { pool } from '../config/db.js';
 export const RoomModel = {
   create: async (data) => {
     const query = `
-      INSERT INTO ROOM (apartment_id, room_number, capacity, price_per_person, women_only)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO room (apartment_id, std_id, room_name, capacity, price_per_person, women_only)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *;
     `;
     const values = [
-      data.apartment_id, data.room_number, data.capacity, 
-      data.price_per_person, data.women_only
+      data.apartment_id, 
+      data.std_id || null,
+      data.room_name || data.room_number, 
+      data.capacity, 
+      data.price_per_person, 
+      data.women_only || false
     ];
     const { rows } = await pool.query(query, values);
     return rows[0];
@@ -17,26 +21,45 @@ export const RoomModel = {
 
   findByApartment: async (apartmentId) => {
     const { rows } = await pool.query(
-      `SELECT * FROM ROOM WHERE apartment_id = $1`, [apartmentId]
+      `SELECT * FROM room WHERE apartment_id = $1 ORDER BY room_name`, [apartmentId]
     );
     return rows;
   },
 
   findById: async (id) => {
     const { rows } = await pool.query(
-      `SELECT * FROM ROOM WHERE room_id = $1`, [id]
+      `SELECT * FROM room WHERE room_id = $1`, [id]
     );
     return rows[0];
   },
 
   update: async (id, data) => {
-    // Dynamically build the update query based on provided data
-    const fields = Object.keys(data);
-    const setClause = fields.map((field, index) => `${field} = $${index + 2}`).join(', ');
-    const values = [id, ...Object.values(data)];
+    const fields = [];
+    const values = [id];
+    let paramCount = 2;
+
+    // Build dynamic query
+    if (data.room_name !== undefined) {
+      fields.push(`room_name = $${paramCount++}`);
+      values.push(data.room_name);
+    }
+    if (data.capacity !== undefined) {
+      fields.push(`capacity = $${paramCount++}`);
+      values.push(data.capacity);
+    }
+    if (data.price_per_person !== undefined) {
+      fields.push(`price_per_person = $${paramCount++}`);
+      values.push(data.price_per_person);
+    }
+    if (data.women_only !== undefined) {
+      fields.push(`women_only = $${paramCount++}`);
+      values.push(data.women_only);
+    }
+
+    if (fields.length === 0) return null;
 
     const query = `
-      UPDATE ROOM SET ${setClause}
+      UPDATE room SET ${fields.join(', ')}
       WHERE room_id = $1
       RETURNING *;
     `;
@@ -46,7 +69,7 @@ export const RoomModel = {
 
   remove: async (id) => {
     const { rows } = await pool.query(
-      `DELETE FROM ROOM WHERE room_id = $1 RETURNING *;`, [id]
+      `DELETE FROM room WHERE room_id = $1 RETURNING *;`, [id]
     );
     return rows[0];
   }
