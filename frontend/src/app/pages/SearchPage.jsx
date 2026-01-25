@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Filter, Bookmark } from 'lucide-react';
+import { Search, Filter, Bookmark, Loader2 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import ListingCard from '../components/ListingCard';
 import { Button } from '../components/ui/button';
@@ -10,54 +10,103 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Slider } from '../components/ui/slider';
 import { Switch } from '../components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
-import { mockApartments, mockRoomShareListings, mockLocations } from '../lib/mockData';
+import listingService from '../services/listing.service';
+import locationService from '../services/location.service';
 import { useApp } from '../context/AppContext';
 import { toast } from 'sonner';
 
 export default function SearchPage() {
   const [searchParams] = useSearchParams();
-  const { addSavedSearch, currentUser } = useApp();
+  const { addSavedSearch, currentUser, isAuthenticated } = useApp();
 
   const initialType = searchParams.get('type') || 'all';
-  
+
+  // Filter states
   const [listingType, setListingType] = useState(initialType);
   const [location, setLocation] = useState('');
   const [priceRange, setPriceRange] = useState([0, 15000]);
   const [womenOnly, setWomenOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Filter listings
-  const filteredApartments = mockApartments.filter((apt) => {
-    const matchesType = listingType === 'all' || listingType === 'apartment';
-    const matchesLocation = !location || apt.location === location;
-    const matchesPrice = apt.pricePerPerson >= priceRange[0] && apt.pricePerPerson <= priceRange[1];
-    const matchesWomenOnly = !womenOnly || apt.womenOnly;
-    const matchesSearch =
-      !searchQuery ||
-      apt.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      apt.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesType && matchesLocation && matchesPrice && matchesWomenOnly && matchesSearch;
-  });
+  // Data states
+  const [listings, setListings] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const filteredRoomShares = mockRoomShareListings.filter((rs) => {
-    const matchesType = listingType === 'all' || listingType === 'room-share';
-    const matchesLocation = !location || rs.location === location;
-    const matchesPrice = rs.pricePerPerson >= priceRange[0] && rs.pricePerPerson <= priceRange[1];
-    const matchesWomenOnly = !womenOnly || rs.womenOnly;
-    const matchesSearch =
-      !searchQuery ||
-      rs.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      rs.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesType && matchesLocation && matchesPrice && matchesWomenOnly && matchesSearch;
-  });
+  // Fetch locations on mount
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const data = await locationService.getAll();
+        setLocations(data.locations || data);
+      } catch (err) {
+        console.error('Error fetching locations:', err);
+      }
+    };
+    fetchLocations();
+  }, []);
 
+  // Fetch listings when filters change
+  useEffect(() => {
+    const fetchListings = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const filters = {};
+
+        if (location) filters.location_id = location;
+        if (listingType !== 'all') filters.listing_type = listingType === 'room-share' ? 'room_share' : listingType;
+        filters.min_price = priceRange[0];
+        filters.max_price = priceRange[1];
+        if (womenOnly) filters.women_only = true;
+
+        const data = await listingService.getAll(filters);
+        let fetchedListings = data.listings || data;
+
+        // Client-side search query filter
+        if (searchQuery) {
+          fetchedListings = fetchedListings.filter(listing => {
+            const searchLower = searchQuery.toLowerCase();
+            return (
+              listing.title?.toLowerCase().includes(searchLower) ||
+              listing.description?.toLowerCase().includes(searchLower) ||
+              listing.location?.area_name?.toLowerCase().includes(searchLower)
+            );
+          });
+        }
+
+        setListings(fetchedListings);
+      } catch (err) {
+        console.error('Error fetching listings:', err);
+        setError('Failed to load listings. Please try again.');
+        toast.error('Failed to load listings');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchListings();
+  }, [listingType, location, priceRange, womenOnly, searchQuery]);
+
+  // Separate listings by type
+  const apartments = listings.filter(l => l.listing_type === 'apartment');
+  const roomShares = listings.filter(l => l.listing_type === 'room_share');
+
+  const filteredApartments = listingType === 'all' || listingType === 'apartment' ? apartments : [];
+  const filteredRoomShares = listingType === 'all' || listingType === 'room-share' ? roomShares : [];
   const totalResults = filteredApartments.length + filteredRoomShares.length;
 
   const handleSaveSearch = () => {
+    if (!isAuthenticated) {
+      toast.error('Please login to save searches');
+      return;
+    }
+
     const search = {
       id: `search-${Date.now()}`,
-      userId: currentUser.id,
+      userId: currentUser?.user_id || currentUser?.id,
       name: `Search on ${new Date().toLocaleDateString()}`,
       filters: {
         location: location || undefined,
@@ -72,10 +121,18 @@ export default function SearchPage() {
     toast.success('Search saved successfully');
   };
 
+  const clearFilters = () => {
+    setListingType('all');
+    setLocation('');
+    setPriceRange([0, 15000]);
+    setWomenOnly(false);
+    setSearchQuery('');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-semibold mb-8">Search Listings</h1>
 
@@ -122,15 +179,15 @@ export default function SearchPage() {
                 {/* Location */}
                 <div>
                   <Label>Location</Label>
-                  <Select value={location} onValueChange={setLocation}>
+                  <Select value={location || 'all'} onValueChange={(val) => setLocation(val === 'all' ? '' : val)}>
                     <SelectTrigger className="mt-2">
                       <SelectValue placeholder="All Locations" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Locations</SelectItem>
-                      {mockLocations.map((loc) => (
-                        <SelectItem key={loc.id} value={loc.name}>
-                          {loc.name}
+                      <SelectItem value="all">All Locations</SelectItem>
+                      {locations.map((loc) => (
+                        <SelectItem key={loc.location_id} value={loc.location_id}>
+                          {loc.area_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -162,23 +219,15 @@ export default function SearchPage() {
                 </div>
 
                 {/* Save Search */}
-                <Button onClick={handleSaveSearch} className="w-full" variant="outline">
-                  <Bookmark className="h-4 w-4 mr-2" />
-                  Save Search
-                </Button>
+                {isAuthenticated && (
+                  <Button onClick={handleSaveSearch} className="w-full" variant="outline">
+                    <Bookmark className="h-4 w-4 mr-2" />
+                    Save Search
+                  </Button>
+                )}
 
                 {/* Clear Filters */}
-                <Button
-                  onClick={() => {
-                    setListingType('all');
-                    setLocation('');
-                    setPriceRange([0, 15000]);
-                    setWomenOnly(false);
-                    setSearchQuery('');
-                  }}
-                  variant="ghost"
-                  className="w-full"
-                >
+                <Button onClick={clearFilters} variant="ghost" className="w-full">
                   Clear All Filters
                 </Button>
               </CardContent>
@@ -193,52 +242,60 @@ export default function SearchPage() {
               </p>
             </div>
 
-            <div className="space-y-8">
-              {/* Apartments */}
-              {filteredApartments.length > 0 && (
-                <div>
-                  {(listingType === 'all' || listingType === 'apartment') && (
-                    <h2 className="text-xl font-semibold mb-4">Apartments ({filteredApartments.length})</h2>
-                  )}
-                  <div className="grid md:grid-cols-2 gap-6">
-                    {filteredApartments.map((apartment) => (
-                      <ListingCard key={apartment.id} listing={apartment} type="apartment" />
-                    ))}
+            {loading ? (
+              <div className="flex justify-center items-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                <span className="ml-2 text-gray-600">Loading listings...</span>
+              </div>
+            ) : error ? (
+              <div className="text-center py-16">
+                <p className="text-red-500 text-lg">{error}</p>
+                <Button variant="outline" className="mt-4" onClick={clearFilters}>
+                  Try Again
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-8">
+                {/* Apartments */}
+                {filteredApartments.length > 0 && (
+                  <div>
+                    {(listingType === 'all' || listingType === 'apartment') && (
+                      <h2 className="text-xl font-semibold mb-4">Apartments ({filteredApartments.length})</h2>
+                    )}
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {filteredApartments.map((apartment) => (
+                        <ListingCard key={apartment.listing_id} listing={apartment} type="apartment" />
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Room Shares */}
-              {filteredRoomShares.length > 0 && (
-                <div>
-                  {(listingType === 'all' || listingType === 'room-share') && (
-                    <h2 className="text-xl font-semibold mb-4">
-                      Room Shares ({filteredRoomShares.length})
-                    </h2>
-                  )}
-                  <div className="grid md:grid-cols-2 gap-6">
-                    {filteredRoomShares.map((listing) => (
-                      <ListingCard key={listing.id} listing={listing} type="room-share" />
-                    ))}
+                {/* Room Shares */}
+                {filteredRoomShares.length > 0 && (
+                  <div>
+                    {(listingType === 'all' || listingType === 'room-share') && (
+                      <h2 className="text-xl font-semibold mb-4">
+                        Room Shares ({filteredRoomShares.length})
+                      </h2>
+                    )}
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {filteredRoomShares.map((listing) => (
+                        <ListingCard key={listing.listing_id} listing={listing} type="room-share" />
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {totalResults === 0 && (
-                <div className="text-center py-16">
-                  <p className="text-gray-500 text-lg">No listings found matching your criteria</p>
-                  <Button variant="outline" className="mt-4" onClick={() => {
-                    setListingType('all');
-                    setLocation('');
-                    setPriceRange([0, 15000]);
-                    setWomenOnly(false);
-                    setSearchQuery('');
-                  }}>
-                    Clear Filters
-                  </Button>
-                </div>
-              )}
-            </div>
+                {totalResults === 0 && !loading && (
+                  <div className="text-center py-16">
+                    <p className="text-gray-500 text-lg">No listings found matching your criteria</p>
+                    <Button variant="outline" className="mt-4" onClick={clearFilters}>
+                      Clear Filters
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
