@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { MapPin, Users, Calendar, Phone, Mail, Heart, Navigation, Star } from 'lucide-react';
+import { MapPin, Users, Calendar, Phone, Mail, Heart, Navigation, Star, Loader2 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -10,12 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '../components/ui/carousel';
-import {
-  mockApartments,
-  mockRoomShareListings,
-  mockUniversities,
-  mockLocations,
-} from '../lib/mockData';
+import listingService from '../services/listing.service';
+import locationService from '../services/location.service';
 import { formatCurrency, formatDate, calculateCommute, getFairRentColor, getFairRentLabel } from '../lib/utils';
 import { useApp } from '../context/AppContext';
 import { toast } from 'sonner';
@@ -25,26 +21,59 @@ export default function ListingDetailsPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { addToWishlist, removeFromWishlist, isInWishlist, currentUser } = useApp();
-  
-  const type = searchParams.get('type');
+
+  const typeFromQuery = searchParams.get('type');
+  const [listing, setListing] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const [selectedUniversity, setSelectedUniversity] = useState('');
   const [commuteInfo, setCommuteInfo] = useState(null);
-  
+  const [universities, setUniversities] = useState([]);
+
   const [visitDate, setVisitDate] = useState('');
   const [visitTime, setVisitTime] = useState('');
 
-  // Find the listing
-  const listing =
-    type === 'apartment'
-      ? mockApartments.find((apt) => apt.id === id)
-      : mockRoomShareListings.find((rs) => rs.id === id);
+  useEffect(() => {
+    const fetchListingAndData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await listingService.getById(id);
+        setListing(data);
 
-  if (!listing) {
+        // Fetch universities for commute calculator (using mock for now or real if available)
+        // For now let's use the mock data as a fallback
+        setUniversities([
+          { id: '1', name: 'IUT', latitude: 23.9482, longitude: 90.3793 },
+          { id: '2', name: 'RUET', latitude: 24.3636, longitude: 88.6284 },
+        ]);
+      } catch (err) {
+        console.error('Error fetching listing details:', err);
+        setError('Listing not found');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchListingAndData();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 text-center flex flex-col items-center justify-center">
+        <Navbar />
+        <Loader2 className="h-10 w-10 animate-spin text-blue-600 mb-4" />
+        <p>Loading property details...</p>
+      </div>
+    );
+  }
+
+  if (error || !listing) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-          <h2 className="text-2xl font-semibold">Listing not found</h2>
+          <h2 className="text-2xl font-semibold">{error || 'Listing not found'}</h2>
           <Button className="mt-4" onClick={() => navigate('/search')}>
             Back to Search
           </Button>
@@ -53,39 +82,47 @@ export default function ListingDetailsPage() {
     );
   }
 
-  const isWishlisted = isInWishlist(listing.id);
+  // Data mapping with safeguards
+  const listingId = listing.listing_id || listing.id;
+  const isWishlisted = isInWishlist(listingId);
+  const isApartment = (listing.listing_type || typeFromQuery) === 'apartment';
+
+  const price = listing.price_per_person || listing.pricePerPerson;
+  const totalRent = listing.price_total || listing.totalRent;
+  const locationName = listing.location?.area_name || listing.area_name || listing.location;
+  const apartmentType = listing.apartment_type || listing.apartmentType;
+  const maxOccupancy = listing.max_occupancy || listing.maxOccupancy;
+  const womenOnly = listing.women_only !== undefined ? listing.women_only : listing.womenOnly;
+  const fairRentScore = listing.fair_rent_score !== undefined ? listing.fair_rent_score : listing.fairRentScore;
+  const ownerName = listing.owner_name || listing.ownerName || 'Property Owner';
+  const description = listing.description || listing.apartment_description || '';
+  const photos = listing.photos || ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=800&auto=format&fit=crop'];
+  const availabilityDate = listing.available_from || listing.availabilityDate || listing.availableFrom;
 
   const handleWishlistToggle = () => {
     if (isWishlisted) {
-      removeFromWishlist(listing.id);
+      removeFromWishlist(listingId);
       toast.success('Removed from wishlist');
     } else {
-      addToWishlist({
-        id: `wl-${Date.now()}`,
-        userId: currentUser.id,
-        listingId: listing.id,
-        listingType: type,
-        addedAt: new Date().toISOString(),
-      });
+      addToWishlist(listingId);
       toast.success('Added to wishlist');
     }
   };
 
   const handleCalculateCommute = () => {
     if (!selectedUniversity) return;
-    
-    const university = mockUniversities.find((u) => u.id === selectedUniversity);
-    const location = mockLocations.find((l) => l.name === listing.location);
-    
-    if (university && location) {
-      const commute = calculateCommute(
-        location.latitude,
-        location.longitude,
-        university.latitude,
-        university.longitude
-      );
+
+    const university = universities.find((u) => u.id === selectedUniversity);
+    // Use coordinates from location object if available
+    const lat = listing.location?.latitude || listing.latitude;
+    const lng = listing.location?.longitude || listing.longitude;
+
+    if (university && lat && lng) {
+      const commute = calculateCommute(lat, lng, university.latitude, university.longitude);
       setCommuteInfo(commute);
       toast.success('Commute calculated');
+    } else {
+      toast.error('Location coordinates not available for this property');
     }
   };
 
@@ -94,16 +131,13 @@ export default function ListingDetailsPage() {
       toast.error('Please select date and time');
       return;
     }
-    toast.success('Visit request sent to owner');
+    toast.success('Visit request sent! The owner will contact you.');
   };
-
-  const isApartment = type === 'apartment';
-  const apartmentData = isApartment ? listing : null;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
           ← Back
@@ -114,21 +148,25 @@ export default function ListingDetailsPage() {
           <div className="lg:col-span-2 space-y-6">
             {/* Image Gallery */}
             <Card>
-              <CardContent className="p-0">
-                <Carousel>
+              <CardContent className="p-0 overflow-hidden rounded-lg">
+                <Carousel className="w-full">
                   <CarouselContent>
-                    {listing.photos.map((photo, index) => (
+                    {photos.map((photo, index) => (
                       <CarouselItem key={index}>
                         <img
                           src={photo}
                           alt={`Property ${index + 1}`}
-                          className="w-full h-96 object-cover rounded-lg"
+                          className="w-full h-[400px] object-cover"
                         />
                       </CarouselItem>
                     ))}
                   </CarouselContent>
-                  <CarouselPrevious className="left-4" />
-                  <CarouselNext className="right-4" />
+                  {photos.length > 1 && (
+                    <>
+                      <CarouselPrevious className="left-4" />
+                      <CarouselNext className="right-4" />
+                    </>
+                  )}
                 </Carousel>
               </CardContent>
             </Card>
@@ -139,11 +177,14 @@ export default function ListingDetailsPage() {
                 <div className="flex justify-between items-start">
                   <div>
                     <CardTitle className="text-2xl">
-                      {isApartment ? `${apartmentData.apartmentType} in ${listing.location}` : `Room Share in ${listing.location}`}
+                      {isApartment
+                        ? (apartmentType ? `${apartmentType} in ${locationName}` : listing.title)
+                        : (listing.room_name ? `${listing.room_name} in ${locationName}` : 'Room Share Listing')
+                      }
                     </CardTitle>
                     <div className="flex items-center mt-2 text-gray-600">
                       <MapPin className="h-4 w-4 mr-1" />
-                      <span>{listing.location}</span>
+                      <span>{locationName}</span>
                     </div>
                   </div>
                   <Button
@@ -156,75 +197,84 @@ export default function ListingDetailsPage() {
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 {/* Price */}
                 <div>
                   <div className="flex items-baseline space-x-2">
                     <span className="text-3xl font-semibold text-gray-900">
-                      {formatCurrency(listing.pricePerPerson)}
+                      {formatCurrency(price)}
                     </span>
                     <span className="text-gray-500">/person/month</span>
                   </div>
-                  {isApartment && (
+                  {isApartment && totalRent && (
                     <p className="text-sm text-gray-500 mt-1">
-                      Total Rent: {formatCurrency(apartmentData.totalRent)}
+                      Total Rent: {formatCurrency(totalRent)}
                     </p>
                   )}
                 </div>
 
                 {/* Fair Rent Score */}
-                {isApartment && (
-                  <div className={`flex items-center space-x-2 ${getFairRentColor(apartmentData.fairRentScore)}`}>
+                {isApartment && fairRentScore !== undefined && fairRentScore !== null && (
+                  <div className={`flex items-center space-x-2 ${getFairRentColor(fairRentScore)}`}>
                     <Star className="h-5 w-5 fill-current" />
                     <span className="font-semibold">
-                      Fair Rent Score: {apartmentData.fairRentScore.toFixed(1)} - {getFairRentLabel(apartmentData.fairRentScore)}
+                      Fair Rent Score: {Number(fairRentScore).toFixed(1)} - {getFairRentLabel(fairRentScore)}
                     </span>
                   </div>
                 )}
 
                 {/* Key Features */}
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                  {isApartment && (
+                  {isApartment ? (
                     <>
-                      <div className="flex items-center space-x-2">
-                        <Users className="h-5 w-5 text-gray-400" />
-                        <span>Max {apartmentData.maxOccupancy} people</span>
-                      </div>
+                      {maxOccupancy && (
+                        <div className="flex items-center space-x-2">
+                          <Users className="h-5 w-5 text-gray-400" />
+                          <span>Max {maxOccupancy} people</span>
+                        </div>
+                      )}
+                      {availabilityDate && (
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="h-5 w-5 text-gray-400" />
+                          <span>Available {formatDate(availabilityDate)}</span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    availabilityDate && (
                       <div className="flex items-center space-x-2">
                         <Calendar className="h-5 w-5 text-gray-400" />
-                        <span>Available {formatDate(apartmentData.availabilityDate)}</span>
+                        <span>Available {formatDate(availabilityDate)}</span>
                       </div>
-                    </>
-                  )}
-                  {!isApartment && (
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-5 w-5 text-gray-400" />
-                      <span>Available {formatDate(listing.availableFrom)}</span>
-                    </div>
+                    )
                   )}
                 </div>
 
                 {/* Badges */}
                 <div className="flex flex-wrap gap-2">
-                  {listing.womenOnly && (
-                    <Badge>Women Only</Badge>
+                  {womenOnly && (
+                    <Badge variant="secondary">Women Only</Badge>
                   )}
-                  {isApartment && <Badge variant="outline">{apartmentData.apartmentType}</Badge>}
-                  <Badge variant="outline">{listing.status}</Badge>
+                  {isApartment && apartmentType && <Badge variant="outline">{apartmentType}</Badge>}
+                  {listing.verification_status && (
+                    <Badge variant={listing.verification_status === 'verified' ? 'default' : 'outline'}>
+                      {listing.verification_status === 'verified' ? 'Verified' : 'Verification Pending'}
+                    </Badge>
+                  )}
                 </div>
 
                 {/* Description */}
                 <div className="pt-4 border-t">
                   <h3 className="font-semibold mb-2">Description</h3>
-                  <p className="text-gray-600">{listing.description}</p>
+                  <p className="text-gray-600 whitespace-pre-wrap">{description}</p>
                 </div>
 
-                {/* Amenities */}
-                {isApartment && apartmentData.amenities && (
+                {/* Amenities - Mock for now as backend might need more implementation */}
+                {isApartment && (
                   <div className="pt-4 border-t">
                     <h3 className="font-semibold mb-2">Amenities</h3>
                     <div className="flex flex-wrap gap-2">
-                      {apartmentData.amenities.map((amenity) => (
+                      {['WiFi', 'Lift', 'Parking', 'Gas'].map((amenity) => (
                         <Badge key={amenity} variant="secondary">
                           {amenity}
                         </Badge>
@@ -238,21 +288,21 @@ export default function ListingDetailsPage() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Contact Owner */}
+            {/* Contact Info */}
             <Card>
               <CardHeader>
                 <CardTitle>Contact {isApartment ? 'Owner' : 'Student'}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <p className="font-semibold">{isApartment ? listing.ownerName : listing.studentName}</p>
+                  <p className="font-semibold text-lg">{ownerName}</p>
                   <div className="flex items-center space-x-2 text-sm text-gray-600 mt-2">
                     <Phone className="h-4 w-4" />
-                    <span>+880 1234 567890</span>
+                    <span>{listing.owner_phone || '+880 1xxx-xxxxxx'}</span>
                   </div>
                   <div className="flex items-center space-x-2 text-sm text-gray-600 mt-1">
                     <Mail className="h-4 w-4" />
-                    <span>contact@example.com</span>
+                    <span>{listing.owner_email || 'Contact through app'}</span>
                   </div>
                 </div>
 
@@ -309,7 +359,7 @@ export default function ListingDetailsPage() {
                       <SelectValue placeholder="Choose university" />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockUniversities.map((uni) => (
+                      {universities.map((uni) => (
                         <SelectItem key={uni.id} value={uni.id}>
                           {uni.name}
                         </SelectItem>
@@ -320,15 +370,15 @@ export default function ListingDetailsPage() {
                 <Button onClick={handleCalculateCommute} className="w-full" disabled={!selectedUniversity}>
                   Calculate Commute
                 </Button>
-                
+
                 {commuteInfo && (
-                  <div className="bg-blue-50 p-4 rounded-lg space-y-2">
+                  <div className="bg-blue-50 p-4 rounded-lg space-y-2 border border-blue-100">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Distance:</span>
+                      <span className="text-gray-600 text-sm">Distance:</span>
                       <span className="font-semibold">{commuteInfo.distance} km</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Walking Time:</span>
+                      <span className="text-gray-600 text-sm">Walking Time:</span>
                       <span className="font-semibold">{commuteInfo.walkingTime} mins</span>
                     </div>
                   </div>
@@ -341,3 +391,4 @@ export default function ListingDetailsPage() {
     </div>
   );
 }
+

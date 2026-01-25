@@ -23,6 +23,15 @@ const app = express();
 app.use(cors({ origin: config.clientUrl || '*' }));
 app.use(express.json());
 
+// Simple request logger for debugging
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  if (req.method === 'POST' || req.method === 'PUT') {
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+  }
+  next();
+});
+
 app.get('/', (req, res) => {
   res.send('RoomLagbe Backend is running!');
 });

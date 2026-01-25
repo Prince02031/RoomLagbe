@@ -39,7 +39,7 @@ export default function SearchPage() {
     const fetchLocations = async () => {
       try {
         const data = await locationService.getAll();
-        setLocations(data.locations || data);
+        setLocations(data.locations || data || []);
       } catch (err) {
         console.error('Error fetching locations:', err);
       }
@@ -63,21 +63,26 @@ export default function SearchPage() {
         if (womenOnly) filters.women_only = true;
 
         const data = await listingService.getAll(filters);
-        let fetchedListings = data.listings || data;
+        let fetchedListings = data.listings || data || [];
 
         // Client-side search query filter
-        if (searchQuery) {
+        if (searchQuery && Array.isArray(fetchedListings)) {
+          const searchLower = searchQuery.toLowerCase();
           fetchedListings = fetchedListings.filter(listing => {
-            const searchLower = searchQuery.toLowerCase();
+            if (!listing) return false;
+            const title = (listing.title || listing.apartment_title || '').toLowerCase();
+            const desc = (listing.description || '').toLowerCase();
+            const locName = (listing.location?.area_name || listing.area_name || listing.location || '').toLowerCase();
+
             return (
-              listing.title?.toLowerCase().includes(searchLower) ||
-              listing.description?.toLowerCase().includes(searchLower) ||
-              listing.location?.area_name?.toLowerCase().includes(searchLower)
+              title.includes(searchLower) ||
+              desc.includes(searchLower) ||
+              locName.includes(searchLower)
             );
           });
         }
 
-        setListings(fetchedListings);
+        setListings(Array.isArray(fetchedListings) ? fetchedListings : []);
       } catch (err) {
         console.error('Error fetching listings:', err);
         setError('Failed to load listings. Please try again.');
@@ -91,8 +96,9 @@ export default function SearchPage() {
   }, [listingType, location, priceRange, womenOnly, searchQuery]);
 
   // Separate listings by type
-  const apartments = listings.filter(l => l.listing_type === 'apartment');
-  const roomShares = listings.filter(l => l.listing_type === 'room_share');
+  const safeListings = Array.isArray(listings) ? listings : [];
+  const apartments = safeListings.filter(l => l?.listing_type === 'apartment');
+  const roomShares = safeListings.filter(l => l?.listing_type === 'room_share');
 
   const filteredApartments = listingType === 'all' || listingType === 'apartment' ? apartments : [];
   const filteredRoomShares = listingType === 'all' || listingType === 'room-share' ? roomShares : [];
@@ -185,9 +191,9 @@ export default function SearchPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Locations</SelectItem>
-                      {locations.map((loc) => (
-                        <SelectItem key={loc.location_id} value={loc.location_id}>
-                          {loc.area_name}
+                      {Array.isArray(locations) && locations.map((loc) => (
+                        <SelectItem key={loc?.location_id || Math.random()} value={loc?.location_id || '#'}>
+                          {loc?.area_name || 'Unknown'}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -264,7 +270,7 @@ export default function SearchPage() {
                     )}
                     <div className="grid md:grid-cols-2 gap-6">
                       {filteredApartments.map((apartment) => (
-                        <ListingCard key={apartment.listing_id} listing={apartment} type="apartment" />
+                        <ListingCard key={apartment?.listing_id || Math.random()} listing={apartment} type="apartment" />
                       ))}
                     </div>
                   </div>
@@ -280,7 +286,7 @@ export default function SearchPage() {
                     )}
                     <div className="grid md:grid-cols-2 gap-6">
                       {filteredRoomShares.map((listing) => (
-                        <ListingCard key={listing.listing_id} listing={listing} type="room-share" />
+                        <ListingCard key={listing?.listing_id || Math.random()} listing={listing} type="room-share" />
                       ))}
                     </div>
                   </div>

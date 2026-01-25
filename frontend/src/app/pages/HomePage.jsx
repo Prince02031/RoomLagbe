@@ -5,9 +5,11 @@ import { Card, CardContent } from '../components/ui/card';
 import Navbar from '../components/Navbar';
 import ListingCard from '../components/ListingCard';
 import { mockApartments, mockRoomShareListings } from '../lib/mockData';
+import { useApp } from '../context/AppContext';
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const { currentUser } = useApp();
 
   const featuredApartments = mockApartments.slice(0, 3);
   const featuredRoomShares = mockRoomShareListings.slice(0, 3);
@@ -36,7 +38,7 @@ export default function HomePage() {
                 className="border-white text-white hover:bg-white/10"
                 onClick={() => navigate('/create-listing')}
               >
-                Post a Listing
+                {currentUser?.role === 'student' ? 'Post a Room' : currentUser?.role === 'owner' ? 'Post an Apartment' : 'Post a Listing'}
               </Button>
             </div>
           </div>
