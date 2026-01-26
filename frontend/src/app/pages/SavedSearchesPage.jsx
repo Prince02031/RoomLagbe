@@ -12,15 +12,20 @@ export default function SavedSearchesPage() {
   const navigate = useNavigate();
   const { savedSearches, removeSavedSearch } = useApp();
 
-  const handleDelete = (id) => {
-    removeSavedSearch(id);
-    toast.success('Search deleted');
+  const handleDelete = async (id) => {
+    try {
+      await removeSavedSearch(id);
+      toast.success('Search deleted');
+    } catch (error) {
+      toast.error('Failed to delete search');
+    }
   };
 
   const handleExecuteSearch = (search) => {
     const params = new URLSearchParams();
-    if (search.filters.location) params.set('location', search.filters.location);
-    if (search.filters.listingType) params.set('type', search.filters.listingType);
+    const criteria = search.criteria || search.filters || {};
+    if (criteria.location) params.set('location', criteria.location);
+    if (criteria.listingType) params.set('type', criteria.listingType);
     navigate(`/search?${params.toString()}`);
   };
 
@@ -40,48 +45,59 @@ export default function SavedSearchesPage() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {savedSearches.map((search) => (
-              <Card key={search.id}>
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg">{search.name}</h3>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Created on {formatDate(search.createdAt)}
-                      </p>
-                      <div className="flex flex-wrap gap-2 mt-3">
-                        {search.filters.location && (
-                          <Badge variant="outline">Location: {search.filters.location}</Badge>
-                        )}
-                        {search.filters.minPrice !== undefined && (
-                          <Badge variant="outline">
-                            Price: ৳{search.filters.minPrice} - ৳{search.filters.maxPrice}
-                          </Badge>
-                        )}
-                        {search.filters.listingType && (
-                          <Badge variant="outline">Type: {search.filters.listingType}</Badge>
-                        )}
-                        {search.filters.womenOnly && (
-                          <Badge variant="outline">Women Only</Badge>
-                        )}
+            {savedSearches.map((search) => {
+              const criteria = search.criteria || {};
+              const searchId = search.saved_search_id || search.id;
+              const searchName = search.name || `Search on ${new Date(search.created_at || search.createdAt).toLocaleDateString()}`;
+              return (
+                <Card key={searchId}>
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg">{searchName}</h3>
+                        <p className="text-sm text-gray-500 mt-1">
+                          Created on {formatDate(search.created_at || search.createdAt)}
+                        </p>
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {criteria.location && (
+                            <Badge variant="outline">Location: {criteria.location}</Badge>
+                          )}
+                          {criteria.min_price !== undefined || criteria.minPrice !== undefined ? (
+                            <Badge variant="outline">
+                              Price: ৳{criteria.min_price || criteria.minPrice || 0} - ৳{criteria.max_price || criteria.maxPrice || 15000}
+                            </Badge>
+                          ) : null}
+                          {criteria.listing_type && (
+                            <Badge variant="outline">Type: {criteria.listing_type}</Badge>
+                          )}
+                          {criteria.listingType && criteria.listingType !== 'all' && (
+                            <Badge variant="outline">Type: {criteria.listingType}</Badge>
+                          )}
+                          {criteria.women_only && (
+                            <Badge variant="outline">Women Only</Badge>
+                          )}
+                          {criteria.womenOnly && (
+                            <Badge variant="outline">Women Only</Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button onClick={() => handleExecuteSearch(search)}>
+                          Search Again
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleDelete(searchId)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex space-x-2">
-                      <Button onClick={() => handleExecuteSearch(search)}>
-                        Search Again
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleDelete(search.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

@@ -4,12 +4,12 @@ export const SavedSearchService = {
   /**
    * Creates a new saved search for a user.
    * @param {number} userId - The ID of the user.
-   * @param {object} searchCriteria - The search filters to save.
+   * @param {object} data - The search data containing name and criteria.
    * @returns {Promise<object>} The created saved search object.
    */
-  createSavedSearch: async (userId, searchCriteria) => {
-    // Future enhancement: Validate the searchCriteria object to ensure it has valid keys.
-    return await SavedSearchModel.create(userId, searchCriteria);
+  createSavedSearch: async (userId, data) => {
+    const { name, criteria } = data;
+    return await SavedSearchModel.create(userId, name, criteria);
   },
 
   /**

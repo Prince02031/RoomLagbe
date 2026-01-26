@@ -34,6 +34,10 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Save search dialog
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [searchName, setSearchName] = useState('');
+
   // Fetch locations on mount
   useEffect(() => {
     const fetchLocations = async () => {
@@ -109,11 +113,18 @@ export default function SearchPage() {
       toast.error('Please login to save searches');
       return;
     }
+    setSearchName(`Search on ${new Date().toLocaleDateString()}`);
+    setShowSaveDialog(true);
+  };
+
+  const confirmSaveSearch = async () => {
+    if (!searchName.trim()) {
+      toast.error('Please enter a search name');
+      return;
+    }
 
     const search = {
-      id: `search-${Date.now()}`,
-      userId: currentUser?.user_id || currentUser?.id,
-      name: `Search on ${new Date().toLocaleDateString()}`,
+      name: searchName,
       filters: {
         location: location || undefined,
         minPrice: priceRange[0],
@@ -121,10 +132,16 @@ export default function SearchPage() {
         listingType: listingType === 'all' ? undefined : listingType,
         womenOnly: womenOnly || undefined,
       },
-      createdAt: new Date().toISOString(),
     };
-    addSavedSearch(search);
-    toast.success('Search saved successfully');
+    
+    try {
+      await addSavedSearch(search);
+      toast.success('Search saved successfully');
+      setShowSaveDialog(false);
+      setSearchName('');
+    } catch (error) {
+      toast.error('Failed to save search');
+    }
   };
 
   const clearFilters = () => {
@@ -305,6 +322,43 @@ export default function SearchPage() {
           </div>
         </div>
       </div>
+
+      {/* Save Search Dialog */}
+      {showSaveDialog && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center" onClick={() => setShowSaveDialog(false)}>
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-semibold mb-2">Save Search</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Give your search a name so you can easily find it later.
+            </p>
+            <div className="mb-4">
+              <Label htmlFor="search-name">Search Name</Label>
+              <Input
+                id="search-name"
+                placeholder="e.g., Affordable rooms near campus"
+                value={searchName}
+                onChange={(e) => setSearchName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    confirmSaveSearch();
+                  }
+                }}
+                maxLength={50}
+                autoFocus
+                className="mt-2"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowSaveDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={confirmSaveSearch}>
+                Save Search
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
