@@ -320,40 +320,42 @@ export default function ListingDetailsPage() {
                   </div>
                 </div>
 
-                {/* Request Visit */}
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button className="w-full">Request Visit</Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Schedule a Visit</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 mt-4">
-                      <div>
-                        <Label>Preferred Date</Label>
-                        <Input
-                          type="date"
-                          value={visitDate}
-                          onChange={(e) => setVisitDate(e.target.value)}
-                          className="mt-2"
-                        />
+                {/* Request Visit - Only show for students who are NOT the owner of this listing */}
+                {currentUser?.role === 'student' && currentUser?.id !== listing.owner_id && (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button className="w-full">Request Visit</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Schedule a Visit</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 mt-4">
+                        <div>
+                          <Label>Preferred Date</Label>
+                          <Input
+                            type="date"
+                            value={visitDate}
+                            onChange={(e) => setVisitDate(e.target.value)}
+                            className="mt-2"
+                          />
+                        </div>
+                        <div>
+                          <Label>Preferred Time</Label>
+                          <Input
+                            type="time"
+                            value={visitTime}
+                            onChange={(e) => setVisitTime(e.target.value)}
+                            className="mt-2"
+                          />
+                        </div>
+                        <Button onClick={handleBookVisit} className="w-full">
+                          Send Request
+                        </Button>
                       </div>
-                      <div>
-                        <Label>Preferred Time</Label>
-                        <Input
-                          type="time"
-                          value={visitTime}
-                          onChange={(e) => setVisitTime(e.target.value)}
-                          className="mt-2"
-                        />
-                      </div>
-                      <Button onClick={handleBookVisit} className="w-full">
-                        Send Request
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                    </DialogContent>
+                  </Dialog>
+                )}
               </CardContent>
             </Card>
 
