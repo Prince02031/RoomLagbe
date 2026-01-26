@@ -1,6 +1,7 @@
 import { ListingModel } from '../models/listing.model.js';
 import { ApartmentModel } from '../models/apartment.model.js';
 import { RoomModel } from '../models/room.model.js';
+import { AmenityModel } from '../models/amenity.model.js';
 
 export const ListingController = {
   // Get all listings (with optional filters)
@@ -81,6 +82,17 @@ export const ListingController = {
         price_per_person: req.body.price_per_person || (listing_type === 'apartment' ? Math.ceil(req.body.price_total / req.body.max_occupancy) : 0),
         ownerId: req.user.id
       });
+
+      // Save amenity associations if provided
+      if (req.body.amenities && Array.isArray(req.body.amenities) && req.body.amenities.length > 0) {
+        for (const amenityId of req.body.amenities) {
+          if (listing_type === 'apartment') {
+            await AmenityModel.addApartmentAmenity(apartment_id, amenityId);
+          } else if (listing_type === 'room_share' && room_id) {
+            await AmenityModel.addRoomAmenity(room_id, amenityId);
+          }
+        }
+      }
 
       res.status(201).json(listing);
     } catch (error) {

@@ -12,6 +12,7 @@ import { Label } from '../components/ui/label';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '../components/ui/carousel';
 import listingService from '../services/listing.service';
 import locationService from '../services/location.service';
+import amenityService from '../services/amenity.service';
 import { formatCurrency, formatDate, calculateCommute, getFairRentColor, getFairRentLabel } from '../lib/utils';
 import { useApp } from '../context/AppContext';
 import { toast } from 'sonner';
@@ -33,6 +34,7 @@ export default function ListingDetailsPage() {
 
   const [visitDate, setVisitDate] = useState('');
   const [visitTime, setVisitTime] = useState('');
+  const [amenities, setAmenities] = useState([]);
 
   useEffect(() => {
     const fetchListingAndData = async () => {
@@ -41,6 +43,16 @@ export default function ListingDetailsPage() {
       try {
         const data = await listingService.getById(id);
         setListing(data);
+
+        // Fetch amenities for this listing
+        if (data.apartment_id) {
+          try {
+            const amenitiesData = await amenityService.getByApartment(data.apartment_id);
+            setAmenities(amenitiesData);
+          } catch (amenityError) {
+            console.error('Error fetching amenities:', amenityError);
+          }
+        }
 
         // Fetch universities for commute calculator (using mock for now or real if available)
         // For now let's use the mock data as a fallback
@@ -271,14 +283,14 @@ export default function ListingDetailsPage() {
                   <p className="text-gray-600 whitespace-pre-wrap">{description}</p>
                 </div>
 
-                {/* Amenities - Mock for now as backend might need more implementation */}
-                {isApartment && (
+                {/* Amenities */}
+                {isApartment && amenities.length > 0 && (
                   <div className="pt-4 border-t">
                     <h3 className="font-semibold mb-2">Amenities</h3>
                     <div className="flex flex-wrap gap-2">
-                      {['WiFi', 'Lift', 'Parking', 'Gas'].map((amenity) => (
-                        <Badge key={amenity} variant="secondary">
-                          {amenity}
+                      {amenities.map((amenity) => (
+                        <Badge key={amenity.amenity_id} variant="secondary">
+                          {amenity.name}
                         </Badge>
                       ))}
                     </div>

@@ -11,8 +11,11 @@ import { Switch } from '../components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import listingService from '../services/listing.service';
 import locationService from '../services/location.service';
+import amenityService from '../services/amenity.service';
 import { useApp } from '../context/AppContext';
 import { toast } from 'sonner';
+import { Checkbox } from '../components/ui/checkbox';
+import { Badge } from '../components/ui/badge';
 
 export default function CreateListingPage() {
   const navigate = useNavigate();
@@ -28,26 +31,34 @@ export default function CreateListingPage() {
   const [description, setDescription] = useState('');
   const [womenOnly, setWomenOnly] = useState(false);
   const [availabilityDate, setAvailabilityDate] = useState('');
+  const [selectedAmenities, setSelectedAmenities] = useState([]);
 
   // Data states
   const [locations, setLocations] = useState([]);
+  const [amenities, setAmenities] = useState([]);
   const [loading, setLoading] = useState(false);
   const [fetchingLocations, setFetchingLocations] = useState(true);
+  const [fetchingAmenities, setFetchingAmenities] = useState(true);
 
-  // Fetch locations on mount
+  // Fetch locations and amenities on mount
   useEffect(() => {
-    const fetchLocations = async () => {
+    const fetchData = async () => {
       try {
-        const data = await locationService.getAll();
-        setLocations(data.locations || data);
+        const [locationsData, amenitiesData] = await Promise.all([
+          locationService.getAll(),
+          amenityService.getAll()
+        ]);
+        setLocations(locationsData.locations || locationsData);
+        setAmenities(amenitiesData);
       } catch (error) {
-        console.error('Error fetching locations:', error);
-        toast.error('Failed to load locations');
+        console.error('Error fetching data:', error);
+        toast.error('Failed to load form data');
       } finally {
         setFetchingLocations(false);
+        setFetchingAmenities(false);
       }
     };
-    fetchLocations();
+    fetchData();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -70,6 +81,7 @@ export default function CreateListingPage() {
         apartment_type: apartmentType,
         max_occupancy: Number(maxOccupancy),
         available_from: availabilityDate,
+        amenities: selectedAmenities,
         // For students, the backend will auto-create a room using these details
         room_name: isStudent ? title : undefined
       };
@@ -212,6 +224,60 @@ export default function CreateListingPage() {
                         ? 'Provide details about the room and flatmates to find the right roommate'
                         : 'Provide detailed information about your property to attract potential tenants'}
                     </p>
+                  </div>
+
+                  {/* Amenities Selection */}
+                  <div className="col-span-full">
+                    <Label>Amenities (Optional)</Label>
+                    {fetchingAmenities ? (
+                      <div className="flex items-center py-4">
+                        <Loader2 className="h-4 w-4 animate-spin text-blue-600 mr-2" />
+                        <span className="text-sm text-gray-600">Loading amenities...</span>
+                      </div>
+                    ) : amenities.length === 0 ? (
+                      <div className="mt-2 p-4 bg-gray-50 rounded-md border border-gray-200">
+                        <p className="text-sm text-gray-500">No amenities available. Please contact admin to add amenities to the system.</p>
+                      </div>
+                    ) : (
+                      <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {amenities.map((amenity) => (
+                          <div
+                            key={amenity.amenity_id}
+                            className="flex items-center space-x-2 p-2 border rounded-md hover:bg-gray-50"
+                          >
+                            <Checkbox
+                              id={`amenity-${amenity.amenity_id}`}
+                              checked={selectedAmenities.includes(amenity.amenity_id)}
+                              onCheckedChange={(checked) => {
+                                setSelectedAmenities(prev =>
+                                  checked
+                                    ? [...prev, amenity.amenity_id]
+                                    : prev.filter(id => id !== amenity.amenity_id)
+                                );
+                              }}
+                            />
+                            <label
+                              htmlFor={`amenity-${amenity.amenity_id}`}
+                              className="text-sm cursor-pointer flex-1"
+                            >
+                              {amenity.name}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {selectedAmenities.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {selectedAmenities.map(amenityId => {
+                          const amenity = amenities.find(a => a.amenity_id === amenityId);
+                          return amenity ? (
+                            <Badge key={amenityId} variant="secondary">
+                              {amenity.name}
+                            </Badge>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   {/* Price Per Person Preview */}

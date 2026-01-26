@@ -1,4 +1,11 @@
 // Utility functions for RoomLagbe
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+// Merge Tailwind classes
+export function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
 
 // Calculate distance between two points (Haversine formula)
 export function calculateDistance(lat1, lon1, lat2, lon2) {
