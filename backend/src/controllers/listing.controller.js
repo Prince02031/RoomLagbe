@@ -53,9 +53,11 @@ export const ListingController = {
 
       // If no apartment_id is provided, create the apartment first
       if (!apartment_id) {
+        // For students posting room shares, create a minimal apartment entry
+        // The student becomes a temporary "owner" for database constraints
         const apartment = await ApartmentModel.create({
           ...req.body,
-          owner_id: req.user.id
+          owner_id: req.user.id, // Student's ID used as placeholder
         });
         apartment_id = apartment.apartment_id;
       }
@@ -76,7 +78,7 @@ export const ListingController = {
       // Create the listing
       const listing = await ListingModel.create({
         ...req.body,
-        apartment_id,
+        apartment_id: listing_type === 'apartment' ? apartment_id : null,
         room_id: listing_type === 'room_share' ? room_id : null,
         listing_type,
         price_per_person: req.body.price_per_person || (listing_type === 'apartment' ? Math.ceil(req.body.price_total / req.body.max_occupancy) : 0),

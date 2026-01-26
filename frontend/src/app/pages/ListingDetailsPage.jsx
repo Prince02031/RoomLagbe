@@ -199,7 +199,7 @@ export default function ListingDetailsPage() {
                       <span>{locationName}</span>
                     </div>
                   </div>
-                  {(!currentUser || currentUser?.role === 'student') && (
+                  {(!currentUser || currentUser?.role === 'student') && (currentUser?.user_id || currentUser?.id) !== listing.creator_id && (
                     <Button
                       variant="outline"
                       size="icon"
@@ -320,8 +320,8 @@ export default function ListingDetailsPage() {
                   </div>
                 </div>
 
-                {/* Request Visit - Only show for students who are NOT the owner of this listing */}
-                {currentUser?.role === 'student' && currentUser?.id !== listing.creator_id && (
+                {/* Request Visit - Only show for students, and hide if they created this listing */}
+                {currentUser?.role === 'student' && (currentUser?.user_id || currentUser?.id) !== listing.creator_id && (
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button className="w-full">Request Visit</Button>

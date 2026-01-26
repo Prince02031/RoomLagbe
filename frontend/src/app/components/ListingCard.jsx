@@ -60,7 +60,7 @@ export default function ListingCard({ listing, type }) {
           alt="Property"
           className="w-full h-full object-cover"
         />
-        {(!currentUser || currentUser?.role === 'student') && (
+        {(!currentUser || currentUser?.role === 'student') && (currentUser?.user_id || currentUser?.id) !== listing.creator_id && (
           <Button
             variant="ghost"
             size="icon"
