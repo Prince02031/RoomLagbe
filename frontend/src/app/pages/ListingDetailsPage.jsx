@@ -321,7 +321,7 @@ export default function ListingDetailsPage() {
                 </div>
 
                 {/* Request Visit - Only show for students who are NOT the owner of this listing */}
-                {currentUser?.role === 'student' && currentUser?.id !== listing.owner_id && (
+                {currentUser?.role === 'student' && currentUser?.id !== listing.creator_id && (
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button className="w-full">Request Visit</Button>

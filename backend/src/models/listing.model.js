@@ -82,7 +82,8 @@ export const ListingModel = {
              COALESCE(loc.longitude, rloc.longitude) as longitude,
              COALESCE(u_owner.name, u_student.name) as owner_name, 
              COALESCE(u_owner.email, u_student.email) as owner_email, 
-             COALESCE(u_owner.phone, u_student.phone) as owner_phone
+             COALESCE(u_owner.phone, u_student.phone) as owner_phone,
+             COALESCE(a.owner_id, r.std_id) as creator_id
       FROM listing l
       LEFT JOIN apartment a ON l.apartment_id = a.apartment_id
       LEFT JOIN room r ON l.room_id = r.room_id
