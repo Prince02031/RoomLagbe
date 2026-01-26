@@ -53,10 +53,12 @@ export default function Navbar() {
             </Button>
             {isAuthenticated && (
               <>
-                <Button variant="ghost" onClick={() => navigate('/wishlist')}>
-                  <Heart className="h-4 w-4 mr-2" />
-                  Wishlist
-                </Button>
+                {currentUser?.role === 'student' && (
+                  <Button variant="ghost" onClick={() => navigate('/wishlist')}>
+                    <Heart className="h-4 w-4 mr-2" />
+                    Wishlist
+                  </Button>
+                )}
                 <Button variant="ghost" onClick={() => navigate('/saved-searches')}>
                   <Bookmark className="h-4 w-4 mr-2" />
                   Saved Searches

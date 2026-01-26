@@ -25,18 +25,18 @@ export default function ListingCard({ listing, type }) {
   const ownerName = listing?.owner_name || listing?.ownerName || 'Property Owner';
   const studentName = listing?.student_name || listing?.studentName || 'Student';
   const photos = listing?.photos || [];
-  const thumbnail = photos.length > 0 ? photos[0] : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=800&auto=format&fit=crop';
+  const thumbnail = photos.length > 0 ? photos[0] : (listing?.thumbnail || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=800&auto=format&fit=crop');
 
   // Availability date handling
   const availabilityDate = listing?.available_from || listing?.availabilityDate || listing?.availableFrom;
 
-  const handleWishlistToggle = (e) => {
+  const handleWishlistToggle = async (e) => {
     e.stopPropagation();
     if (isWishlisted) {
-      removeFromWishlist(listingId);
+      await removeFromWishlist(listingId);
       toast.success('Removed from wishlist');
     } else {
-      addToWishlist(listingId);
+      await addToWishlist(listingId);
       toast.success('Added to wishlist');
     }
   };
@@ -60,15 +60,17 @@ export default function ListingCard({ listing, type }) {
           alt="Property"
           className="w-full h-full object-cover"
         />
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`absolute top-2 right-2 bg-white/90 hover:bg-white ${isWishlisted ? 'text-red-500' : ''
-            }`}
-          onClick={handleWishlistToggle}
-        >
-          <Heart className={`h-5 w-5 ${isWishlisted ? 'fill-current' : ''}`} />
-        </Button>
+        {(!currentUser || currentUser?.role === 'student') && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`absolute top-2 right-2 bg-white/90 hover:bg-white ${isWishlisted ? 'text-red-500' : ''
+              }`}
+            onClick={handleWishlistToggle}
+          >
+            <Heart className={`h-5 w-5 ${isWishlisted ? 'fill-current' : ''}`} />
+          </Button>
+        )}
         {isApartment() && fairRentScore !== undefined && fairRentScore !== null && (
           <div className={`absolute bottom-2 left-2 flex items-center space-x-1 ${getFairRentColor(fairRentScore)} bg-white px-2 py-1 rounded-md text-sm`}>
             <Star className="h-4 w-4 fill-current" />

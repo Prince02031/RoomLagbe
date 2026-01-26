@@ -6,7 +6,7 @@ const wishlistService = {
      */
     getWishlist: async () => {
         try {
-            const response = await api.get('/api/wishlist');
+            const response = await api.get('/wishlist');
             return response.data;
         } catch (error) {
             console.error('Error fetching wishlist:', error);
@@ -20,7 +20,7 @@ const wishlistService = {
      */
     addToWishlist: async (listingId) => {
         try {
-            const response = await api.post('/api/wishlist', { listingId });
+            const response = await api.post('/wishlist', { listingId });
             return response.data;
         } catch (error) {
             console.error('Error adding to wishlist:', error);
@@ -34,7 +34,7 @@ const wishlistService = {
      */
     removeFromWishlist: async (listingId) => {
         try {
-            await api.delete(`/api/wishlist/${listingId}`);
+            await api.delete(`/wishlist/${listingId}`);
         } catch (error) {
             console.error('Error removing from wishlist:', error);
             throw error;

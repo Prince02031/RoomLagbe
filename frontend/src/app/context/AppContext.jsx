@@ -17,6 +17,9 @@ export function AppProvider({ children }) {
 
   // Fetch wishlist from backend
   const fetchWishlist = async () => {
+    if (!authService.isAuthenticated() || authService.getCurrentUser()?.role !== 'student') {
+      return;
+    }
     try {
       const data = await wishlistService.getWishlist();
       setWishlist(data);
@@ -32,7 +35,7 @@ export function AppProvider({ children }) {
     setCurrentUser(user);
     setIsAuthenticated(authenticated);
 
-    if (authenticated) {
+    if (authenticated && user?.role === 'student') {
       fetchWishlist();
     }
   }, []);
@@ -45,8 +48,10 @@ export function AppProvider({ children }) {
       const response = await authService.login(username, password);
       setCurrentUser(response.user);
       setIsAuthenticated(true);
-      // Fetch wishlist immediately after login
-      fetchWishlist();
+      // Fetch wishlist immediately after login if student
+      if (response.user?.role === 'student') {
+        fetchWishlist();
+      }
       return response;
     } catch (error) {
       throw error;
@@ -76,20 +81,21 @@ export function AppProvider({ children }) {
   };
 
   const addToWishlist = async (listingId) => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || currentUser?.role !== 'student') return;
     try {
+      // Optimistic update would be better but let's at least ensure we refresh
       await wishlistService.addToWishlist(listingId);
-      // Update local state by re-fetching or optimistic update
-      fetchWishlist();
+      await fetchWishlist(); // Await refresh to ensure state is current
     } catch (error) {
       console.error('Error adding to wishlist:', error);
     }
   };
 
   const removeFromWishlist = async (listingId) => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || currentUser?.role !== 'student') return;
     try {
       await wishlistService.removeFromWishlist(listingId);
+      // Immediately filter locally for instant snap
       setWishlist((prev) => prev.filter((item) => item.listing_id !== listingId && item.listingId !== listingId));
     } catch (error) {
       console.error('Error removing from wishlist:', error);

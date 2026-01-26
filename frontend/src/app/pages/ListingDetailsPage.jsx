@@ -187,14 +187,16 @@ export default function ListingDetailsPage() {
                       <span>{locationName}</span>
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleWishlistToggle}
-                    className={isWishlisted ? 'text-red-500 border-red-500' : ''}
-                  >
-                    <Heart className={`h-5 w-5 ${isWishlisted ? 'fill-current' : ''}`} />
-                  </Button>
+                  {(!currentUser || currentUser?.role === 'student') && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handleWishlistToggle}
+                      className={isWishlisted ? 'text-red-500 border-red-500' : ''}
+                    >
+                      <Heart className={`h-5 w-5 ${isWishlisted ? 'fill-current' : ''}`} />
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">

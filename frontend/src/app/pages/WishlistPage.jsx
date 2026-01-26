@@ -1,30 +1,27 @@
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import ListingCard from '../components/ListingCard';
 import { Card, CardContent } from '../components/ui/card';
 import { useApp } from '../context/AppContext';
-import { mockApartments, mockRoomShareListings } from '../lib/mockData';
 
 export default function WishlistPage() {
-  const { wishlist } = useApp();
+  const { wishlist, currentUser, isAuthenticated } = useApp();
+  const navigate = useNavigate();
 
-  const wishlistedListings = wishlist.map((item) => {
-    if (item.listingType === 'apartment') {
-      return {
-        listing: mockApartments.find((apt) => apt.id === item.listingId),
-        type: 'apartment',
-      };
-    } else {
-      return {
-        listing: mockRoomShareListings.find((rs) => rs.id === item.listingId),
-        type: 'room-share',
-      };
+  // Redirect non-students or unauthenticated users
+  useEffect(() => {
+    if (isAuthenticated && currentUser?.role !== 'student') {
+      navigate('/dashboard');
     }
-  }).filter((item) => item.listing);
+  }, [isAuthenticated, currentUser, navigate]);
+
+  const wishlistedListings = wishlist;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-semibold mb-8">My Wishlist</h1>
 
@@ -37,14 +34,12 @@ export default function WishlistPage() {
           </Card>
         ) : (
           <div className="grid md:grid-cols-3 gap-6">
-            {wishlistedListings.map((item, index) => (
-              item.listing && (
-                <ListingCard
-                  key={index}
-                  listing={item.listing}
-                  type={item.type}
-                />
-              )
+            {wishlistedListings.map((item) => (
+              <ListingCard
+                key={item.listing_id || item.id}
+                listing={item}
+                type={item.listing_type}
+              />
             ))}
           </div>
         )}
