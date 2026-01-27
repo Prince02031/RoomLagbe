@@ -27,5 +27,9 @@
     "eslint": "^9.39.2",
     "jest": "^30.2.0",
     "nodemon": "^3.1.11"
+  },
+  "overrides": {
+    "inflight": "npm:@aashutoshrathi/inflight@^1.0.0",
+    "glob": "^10.3.10"
   }
 }
