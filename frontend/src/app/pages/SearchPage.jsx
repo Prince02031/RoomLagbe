@@ -20,12 +20,16 @@ export default function SearchPage() {
   const { addSavedSearch, currentUser, isAuthenticated } = useApp();
 
   const initialType = searchParams.get('type') || 'all';
+  const initialLocation = searchParams.get('location') || '';
+  const initialMinPrice = parseInt(searchParams.get('minPrice')) || 0;
+  const initialMaxPrice = parseInt(searchParams.get('maxPrice')) || 15000;
+  const initialWomenOnly = searchParams.get('womenOnly') === 'true';
 
   // Filter states
   const [listingType, setListingType] = useState(initialType);
-  const [location, setLocation] = useState('');
-  const [priceRange, setPriceRange] = useState([0, 15000]);
-  const [womenOnly, setWomenOnly] = useState(false);
+  const [location, setLocation] = useState(initialLocation);
+  const [priceRange, setPriceRange] = useState([initialMinPrice, initialMaxPrice]);
+  const [womenOnly, setWomenOnly] = useState(initialWomenOnly);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Data states
@@ -34,12 +38,16 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Save search dialog
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [searchName, setSearchName] = useState('');
+
   // Fetch locations on mount
   useEffect(() => {
     const fetchLocations = async () => {
       try {
         const data = await locationService.getAll();
-        setLocations(data.locations || data);
+        setLocations(data.locations || data || []);
       } catch (err) {
         console.error('Error fetching locations:', err);
       }
@@ -63,21 +71,26 @@ export default function SearchPage() {
         if (womenOnly) filters.women_only = true;
 
         const data = await listingService.getAll(filters);
-        let fetchedListings = data.listings || data;
+        let fetchedListings = data.listings || data || [];
 
         // Client-side search query filter
-        if (searchQuery) {
+        if (searchQuery && Array.isArray(fetchedListings)) {
+          const searchLower = searchQuery.toLowerCase();
           fetchedListings = fetchedListings.filter(listing => {
-            const searchLower = searchQuery.toLowerCase();
+            if (!listing) return false;
+            const title = (listing.title || listing.apartment_title || '').toLowerCase();
+            const desc = (listing.description || '').toLowerCase();
+            const locName = (listing.location?.area_name || listing.area_name || listing.location || '').toLowerCase();
+
             return (
-              listing.title?.toLowerCase().includes(searchLower) ||
-              listing.description?.toLowerCase().includes(searchLower) ||
-              listing.location?.area_name?.toLowerCase().includes(searchLower)
+              title.includes(searchLower) ||
+              desc.includes(searchLower) ||
+              locName.includes(searchLower)
             );
           });
         }
 
-        setListings(fetchedListings);
+        setListings(Array.isArray(fetchedListings) ? fetchedListings : []);
       } catch (err) {
         console.error('Error fetching listings:', err);
         setError('Failed to load listings. Please try again.');
@@ -91,8 +104,9 @@ export default function SearchPage() {
   }, [listingType, location, priceRange, womenOnly, searchQuery]);
 
   // Separate listings by type
-  const apartments = listings.filter(l => l.listing_type === 'apartment');
-  const roomShares = listings.filter(l => l.listing_type === 'room_share');
+  const safeListings = Array.isArray(listings) ? listings : [];
+  const apartments = safeListings.filter(l => l?.listing_type === 'apartment');
+  const roomShares = safeListings.filter(l => l?.listing_type === 'room_share');
 
   const filteredApartments = listingType === 'all' || listingType === 'apartment' ? apartments : [];
   const filteredRoomShares = listingType === 'all' || listingType === 'room-share' ? roomShares : [];
@@ -103,11 +117,18 @@ export default function SearchPage() {
       toast.error('Please login to save searches');
       return;
     }
+    setSearchName(`Search on ${new Date().toLocaleDateString()}`);
+    setShowSaveDialog(true);
+  };
+
+  const confirmSaveSearch = async () => {
+    if (!searchName.trim()) {
+      toast.error('Please enter a search name');
+      return;
+    }
 
     const search = {
-      id: `search-${Date.now()}`,
-      userId: currentUser?.user_id || currentUser?.id,
-      name: `Search on ${new Date().toLocaleDateString()}`,
+      name: searchName,
       filters: {
         location: location || undefined,
         minPrice: priceRange[0],
@@ -115,10 +136,16 @@ export default function SearchPage() {
         listingType: listingType === 'all' ? undefined : listingType,
         womenOnly: womenOnly || undefined,
       },
-      createdAt: new Date().toISOString(),
     };
-    addSavedSearch(search);
-    toast.success('Search saved successfully');
+    
+    try {
+      await addSavedSearch(search);
+      toast.success('Search saved successfully');
+      setShowSaveDialog(false);
+      setSearchName('');
+    } catch (error) {
+      toast.error('Failed to save search');
+    }
   };
 
   const clearFilters = () => {
@@ -185,9 +212,9 @@ export default function SearchPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Locations</SelectItem>
-                      {locations.map((loc) => (
-                        <SelectItem key={loc.location_id} value={loc.location_id}>
-                          {loc.area_name}
+                      {Array.isArray(locations) && locations.map((loc) => (
+                        <SelectItem key={loc?.location_id || Math.random()} value={loc?.location_id || '#'}>
+                          {loc?.area_name || 'Unknown'}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -264,7 +291,7 @@ export default function SearchPage() {
                     )}
                     <div className="grid md:grid-cols-2 gap-6">
                       {filteredApartments.map((apartment) => (
-                        <ListingCard key={apartment.listing_id} listing={apartment} type="apartment" />
+                        <ListingCard key={apartment?.listing_id || Math.random()} listing={apartment} type="apartment" />
                       ))}
                     </div>
                   </div>
@@ -280,7 +307,7 @@ export default function SearchPage() {
                     )}
                     <div className="grid md:grid-cols-2 gap-6">
                       {filteredRoomShares.map((listing) => (
-                        <ListingCard key={listing.listing_id} listing={listing} type="room-share" />
+                        <ListingCard key={listing?.listing_id || Math.random()} listing={listing} type="room-share" />
                       ))}
                     </div>
                   </div>
@@ -299,6 +326,43 @@ export default function SearchPage() {
           </div>
         </div>
       </div>
+
+      {/* Save Search Dialog */}
+      {showSaveDialog && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center" onClick={() => setShowSaveDialog(false)}>
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-semibold mb-2">Save Search</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Give your search a name so you can easily find it later.
+            </p>
+            <div className="mb-4">
+              <Label htmlFor="search-name">Search Name</Label>
+              <Input
+                id="search-name"
+                placeholder="e.g., Affordable rooms near campus"
+                value={searchName}
+                onChange={(e) => setSearchName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    confirmSaveSearch();
+                  }
+                }}
+                maxLength={50}
+                autoFocus
+                className="mt-2"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowSaveDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={confirmSaveSearch}>
+                Save Search
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

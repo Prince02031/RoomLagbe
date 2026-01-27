@@ -3,7 +3,8 @@ import { SavedSearchService } from '../services/savedSearch.service.js';
 export const SavedSearchController = {
   create: async (req, res, next) => {
     try {
-      const savedSearch = await SavedSearchService.createSavedSearch(req.user.id, req.body);
+      const { name, ...criteria } = req.body;
+      const savedSearch = await SavedSearchService.createSavedSearch(req.user.id, { name, criteria });
       res.status(201).json(savedSearch);
     } catch (err) {
       next(err);

@@ -78,6 +78,19 @@ const listingService = {
             throw error.response?.data || error;
         }
     },
+
+    /**
+     * Get current user's listings
+     * @returns {Promise<Array>} List of user listings
+     */
+    async getMine() {
+        try {
+            const response = await api.get('/listings/mine');
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error;
+        }
+    },
 };
 
 export default listingService;

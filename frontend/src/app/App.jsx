@@ -9,7 +9,6 @@ import SearchPage from './pages/SearchPage';
 import ListingDetailsPage from './pages/ListingDetailsPage';
 import DashboardPage from './pages/DashboardPage';
 import CreateListingPage from './pages/CreateListingPage';
-import PostRoomSharePage from './pages/PostRoomSharePage';
 import WishlistPage from './pages/WishlistPage';
 import SavedSearchesPage from './pages/SavedSearchesPage';
 import AnalyticsPage from './pages/AnalyticsPage';
@@ -41,14 +40,6 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <CreateListingPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/post-room-share"
-              element={
-                <ProtectedRoute>
-                  <PostRoomSharePage />
                 </ProtectedRoute>
               }
             />

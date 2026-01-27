@@ -1,14 +1,13 @@
 import { pool } from '../config/db.js';
 
 export const SavedSearchModel = {
-  create: async (userId, searchCriteria) => {
+  create: async (userId, name, searchCriteria) => {
     const query = `
-      INSERT INTO saved_search (user_id, criteria)
-      VALUES ($1, $2)
+      INSERT INTO saved_search (user_id, name, criteria)
+      VALUES ($1, $2, $3)
       RETURNING *;
     `;
-    // searchCriteria is a JSON object
-    const { rows } = await pool.query(query, [userId, searchCriteria]);
+    const { rows } = await pool.query(query, [userId, name, searchCriteria]);
     return rows[0];
   },
 
