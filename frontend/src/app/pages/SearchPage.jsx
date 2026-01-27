@@ -20,12 +20,16 @@ export default function SearchPage() {
   const { addSavedSearch, currentUser, isAuthenticated } = useApp();
 
   const initialType = searchParams.get('type') || 'all';
+  const initialLocation = searchParams.get('location') || '';
+  const initialMinPrice = parseInt(searchParams.get('minPrice')) || 0;
+  const initialMaxPrice = parseInt(searchParams.get('maxPrice')) || 15000;
+  const initialWomenOnly = searchParams.get('womenOnly') === 'true';
 
   // Filter states
   const [listingType, setListingType] = useState(initialType);
-  const [location, setLocation] = useState('');
-  const [priceRange, setPriceRange] = useState([0, 15000]);
-  const [womenOnly, setWomenOnly] = useState(false);
+  const [location, setLocation] = useState(initialLocation);
+  const [priceRange, setPriceRange] = useState([initialMinPrice, initialMaxPrice]);
+  const [womenOnly, setWomenOnly] = useState(initialWomenOnly);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Data states

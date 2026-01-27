@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Eye } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
@@ -23,9 +23,16 @@ export default function SavedSearchesPage() {
 
   const handleExecuteSearch = (search) => {
     const params = new URLSearchParams();
-    const criteria = search.criteria || search.filters || {};
+    const criteria = search.criteria || {};
     if (criteria.location) params.set('location', criteria.location);
-    if (criteria.listingType) params.set('type', criteria.listingType);
+    if (criteria.listingType && criteria.listingType !== 'all') params.set('type', criteria.listingType);
+    if (criteria.listing_type && criteria.listing_type !== 'all') params.set('type', criteria.listing_type);
+    if (criteria.minPrice !== undefined) params.set('minPrice', criteria.minPrice);
+    if (criteria.min_price !== undefined) params.set('minPrice', criteria.min_price);
+    if (criteria.maxPrice !== undefined) params.set('maxPrice', criteria.maxPrice);
+    if (criteria.max_price !== undefined) params.set('maxPrice', criteria.max_price);
+    if (criteria.womenOnly) params.set('womenOnly', 'true');
+    if (criteria.women_only) params.set('womenOnly', 'true');
     navigate(`/search?${params.toString()}`);
   };
 
@@ -88,7 +95,16 @@ export default function SavedSearchesPage() {
                         <Button
                           variant="outline"
                           size="icon"
+                          onClick={() => handleExecuteSearch(search)}
+                          title="View Details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
                           onClick={() => handleDelete(searchId)}
+                          title="Delete"
                         >
                           <Trash2 className="h-4 w-4 text-red-600" />
                         </Button>
