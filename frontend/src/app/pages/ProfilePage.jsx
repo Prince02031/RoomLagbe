@@ -1,11 +1,21 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { CheckCircle, Eye, EyeOff, Lock } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../components/ui/alert-dialog';
 import { useApp } from '../context/AppContext';
 import userService from '../services/user.service';
 import { toast } from 'sonner';
@@ -19,6 +29,7 @@ export default function ProfilePage() {
   const [fetchingProfile, setFetchingProfile] = useState(true);
 
   // Password change state
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showPasswordSection, setShowPasswordSection] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -179,13 +190,24 @@ export default function ProfilePage() {
           {/* Change Password */}
           <Card>
             <CardHeader>
-              <CardTitle>Change Password</CardTitle>
+              <CardTitle>Security</CardTitle>
             </CardHeader>
             <CardContent>
               {!showPasswordSection ? (
-                <Button onClick={() => setShowPasswordSection(true)} variant="outline">
-                  Change Password
-                </Button>
+                <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-blue-100 rounded-full">
+                      <Lock className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium">Password</h3>
+                      <p className="text-sm text-gray-500">Update your account password</p>
+                    </div>
+                  </div>
+                  <Button onClick={() => setShowConfirmDialog(true)} variant="outline">
+                    Change
+                  </Button>
+                </div>
               ) : (
                 <form onSubmit={handleChangePassword} className="space-y-4">
                   <div>
@@ -301,6 +323,27 @@ export default function ProfilePage() {
         </div>
         )}
       </div>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change Password?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Do you really want to change your password? You will need to provide your current password to confirm this change.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              setShowPasswordSection(true);
+              setShowConfirmDialog(false);
+            }}>
+              Yes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
