@@ -1,18 +1,48 @@
 import { useNavigate } from 'react-router-dom';
-import { Search, Home, Users, TrendingUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Home, Users, TrendingUp, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import Navbar from '../components/Navbar';
 import ListingCard from '../components/ListingCard';
-import { mockApartments, mockRoomShareListings } from '../lib/mockData';
+import listingService from '../services/listing.service';
 import { useApp } from '../context/AppContext';
 
 export default function HomePage() {
   const navigate = useNavigate();
   const { currentUser } = useApp();
 
-  const featuredApartments = mockApartments.slice(0, 3);
-  const featuredRoomShares = mockRoomShareListings.slice(0, 3);
+  const [featuredApartments, setFeaturedApartments] = useState([]);
+  const [featuredRoomShares, setFeaturedRoomShares] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchListings = async () => {
+      try {
+        // Fetch apartments
+        const apartments = await listingService.getAll({ listing_type: 'apartment' });
+        // Get 3 random apartments
+        const randomApartments = apartments
+          .sort(() => 0.5 - Math.random())
+          .slice(0, 3);
+        setFeaturedApartments(randomApartments);
+
+        // Fetch room shares
+        const roomShares = await listingService.getAll({ listing_type: 'room_share' });
+        // Get 3 random room shares
+        const randomRoomShares = roomShares
+          .sort(() => 0.5 - Math.random())
+          .slice(0, 3);
+        setFeaturedRoomShares(randomRoomShares);
+      } catch (error) {
+        console.error('Error fetching featured listings:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchListings();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -96,11 +126,24 @@ export default function HomePage() {
             View All
           </Button>
         </div>
-        <div className="grid md:grid-cols-3 gap-6">
-          {featuredApartments.map((apartment) => (
-            <ListingCard key={apartment.id} listing={apartment} type="apartment" />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex justify-center items-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <span className="ml-2 text-gray-600">Loading apartments...</span>
+          </div>
+        ) : featuredApartments.length > 0 ? (
+          <div className="grid md:grid-cols-3 gap-6">
+            {featuredApartments.map((apartment) => (
+              <ListingCard key={apartment.listing_id || apartment.id} listing={apartment} type="apartment" />
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="p-8 text-center text-gray-500">
+              No apartments available yet. Be the first to post one!
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Featured Room Shares */}
@@ -111,11 +154,24 @@ export default function HomePage() {
             View All
           </Button>
         </div>
-        <div className="grid md:grid-cols-3 gap-6">
-          {featuredRoomShares.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} type="room-share" />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex justify-center items-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <span className="ml-2 text-gray-600">Loading room shares...</span>
+          </div>
+        ) : featuredRoomShares.length > 0 ? (
+          <div className="grid md:grid-cols-3 gap-6">
+            {featuredRoomShares.map((listing) => (
+              <ListingCard key={listing.listing_id || listing.id} listing={listing} type="room-share" />
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="p-8 text-center text-gray-500">
+              No room shares available yet. Be the first to post one!
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Footer */}

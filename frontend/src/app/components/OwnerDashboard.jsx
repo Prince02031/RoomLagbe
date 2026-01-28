@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, Users, Eye } from 'lucide-react';
+import { Home, Plus, Users, Eye, Check, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
@@ -7,14 +7,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useApp } from '../context/AppContext';
 import { useState, useEffect } from 'react';
 import listingService from '../services/listing.service';
+import bookingService from '../services/booking.service';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function OwnerDashboard() {
   const navigate = useNavigate();
-  const { currentUser } = useApp();
+  const { currentUser, wishlist } = useApp();
   const [listings, setListings] = useState([]);
+  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [bookingsLoading, setBookingsLoading] = useState(true);
 
   useEffect(() => {
     const fetchMyListings = async () => {
@@ -29,6 +33,41 @@ export default function OwnerDashboard() {
     };
     fetchMyListings();
   }, []);
+
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        const data = await bookingService.getOwnerBookings();
+        setBookings(data);
+      } catch (error) {
+        console.error('Error fetching bookings:', error);
+      } finally {
+        setBookingsLoading(false);
+      }
+    };
+    fetchBookings();
+  }, []);
+
+  const handleUpdateBookingStatus = async (bookingId, status) => {
+    try {
+      console.log('Updating booking:', bookingId, 'to status:', status);
+      await bookingService.updateStatus(bookingId, status);
+      toast.success(`Booking ${status} successfully`);
+      // Refresh bookings
+      const data = await bookingService.getOwnerBookings();
+      setBookings(data);
+    } catch (error) {
+      console.error('Error updating booking status:', error);
+      console.error('Error response:', error.response?.data);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || `Failed to ${status} booking`;
+      toast.error(errorMessage);
+    }
+  };
+
+  const pendingBookings = bookings.filter(b => b.status === 'pending');
+  const myListingsWishlisted = wishlist.filter(w => 
+    listings.some(l => l.listing_id === w.listing_id)
+  );
 
   if (loading) {
     return (
@@ -65,8 +104,8 @@ export default function OwnerDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Active Requests</p>
-                <p className="text-2xl font-semibold mt-1">5</p>
+                <p className="text-sm text-gray-600">Pending Requests</p>
+                <p className="text-2xl font-semibold mt-1">{pendingBookings.length}</p>
               </div>
               <Eye className="h-10 w-10 text-green-600" />
             </div>
@@ -77,8 +116,8 @@ export default function OwnerDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Views</p>
-                <p className="text-2xl font-semibold mt-1">152</p>
+                <p className="text-sm text-gray-600">Total Requests</p>
+                <p className="text-2xl font-semibold mt-1">{bookings.length}</p>
               </div>
               <Users className="h-10 w-10 text-purple-600" />
             </div>
@@ -90,7 +129,7 @@ export default function OwnerDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Wishlist Adds</p>
-                <p className="text-2xl font-semibold mt-1">23</p>
+                <p className="text-2xl font-semibold mt-1">{myListingsWishlisted.length}</p>
               </div>
               <Plus className="h-10 w-10 text-red-600" />
             </div>
@@ -148,11 +187,93 @@ export default function OwnerDashboard() {
         </TabsContent>
 
         <TabsContent value="requests" className="mt-6">
-          <Card>
-            <CardContent className="p-8 text-center text-gray-500">
-              <p>No visit requests at the moment</p>
-            </CardContent>
-          </Card>
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Visit Requests</h2>
+            {bookingsLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+              </div>
+            ) : bookings.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center text-gray-500">
+                  No visit requests at the moment
+                </CardContent>
+              </Card>
+            ) : (
+              bookings.map((booking) => (
+                <Card key={booking.booking_id}>
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-semibold text-lg">
+                              {booking.apartment_title || booking.room_name || 'Listing'}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              {formatCurrency(booking.price_per_person)}/person
+                            </p>
+                          </div>
+                          <Badge 
+                            variant={
+                              booking.status === 'approved' ? 'default' : 
+                              booking.status === 'rejected' ? 'destructive' : 
+                              'secondary'
+                            }
+                            className="ml-4"
+                          >
+                            {booking.status}
+                          </Badge>
+                        </div>
+                        <div className="mt-3 space-y-1">
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Student:</span> {booking.student_name || 'Student'}
+                          </p>
+                          {booking.student_email && (
+                            <p className="text-sm text-gray-600">
+                              <span className="font-medium">Email:</span> {booking.student_email}
+                            </p>
+                          )}
+                          {booking.student_phone && (
+                            <p className="text-sm text-gray-600">
+                              <span className="font-medium">Phone:</span> {booking.student_phone}
+                            </p>
+                          )}
+                          {booking.visit_time && (
+                            <p className="text-sm text-gray-600">
+                              <span className="font-medium">Visit Time:</span> {new Date(booking.visit_time).toLocaleString()}
+                            </p>
+                          )}
+                          <p className="text-sm text-gray-500">
+                            Requested on: {formatDate(booking.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                      {booking.status === 'pending' ? (
+                        <div className="flex space-x-2 ml-4">
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleUpdateBookingStatus(booking.booking_id, 'approved')}
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Approve
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={() => handleUpdateBookingStatus(booking.booking_id, 'rejected')}
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Reject
+                          </Button>
+                        </div>
+                      ) : null}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>

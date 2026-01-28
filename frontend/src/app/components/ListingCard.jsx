@@ -16,6 +16,7 @@ export default function ListingCard({ listing, type }) {
   const isWishlisted = isInWishlist(listingId);
 
   // Handle both snake_case (backend) and camelCase (mock)
+  const title = listing?.title || listing?.apartment_title || listing?.room_name || 'Untitled Listing';
   const price = listing?.price_per_person || listing?.pricePerPerson || 0;
   const locationName = listing?.location?.area_name || listing?.area_name || listing?.location || 'Unknown Location';
   const apartmentType = listing?.apartment_type || listing?.apartmentType;
@@ -32,6 +33,14 @@ export default function ListingCard({ listing, type }) {
 
   const handleWishlistToggle = async (e) => {
     e.stopPropagation();
+    
+    // Redirect to login if not authenticated
+    if (!currentUser) {
+      toast.info('Please login to add items to wishlist');
+      navigate('/login');
+      return;
+    }
+    
     if (isWishlisted) {
       await removeFromWishlist(listingId);
       toast.success('Removed from wishlist');
@@ -80,6 +89,11 @@ export default function ListingCard({ listing, type }) {
       </div>
       <CardContent className="p-4">
         <div className="space-y-2">
+          {/* Title */}
+          <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
+            {title}
+          </h3>
+
           {/* Location */}
           <div className="flex items-center text-gray-600">
             <MapPin className="h-4 w-4 mr-1" />

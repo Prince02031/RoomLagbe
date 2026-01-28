@@ -1,11 +1,11 @@
 export const LISTING_STATUS = {
-  AVAILABLE: 'Available',
-  RENTED: 'Rented',
-  INACTIVE: 'Inactive'
+  AVAILABLE: 'available',
+  RENTED: 'rented',
+  INACTIVE: 'inactive'
 };
 
 export const BOOKING_STATUS = {
-  PENDING: 'Pending',
-  APPROVED: 'Approved',
-  REJECTED: 'Rejected'
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected'
 };

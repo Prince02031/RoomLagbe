@@ -142,7 +142,7 @@ export default function CreateListingPage() {
                       <SelectTrigger className="mt-2">
                         <SelectValue placeholder="Select location" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-[300px]">
                         {locations.map((loc) => (
                           <SelectItem key={loc.location_id} value={loc.location_id}>
                             {loc.area_name}
@@ -210,20 +210,16 @@ export default function CreateListingPage() {
                   </div>
 
                   <div className="col-span-full">
-                    <Label>Description *</Label>
+                    <Label>Description * ({isStudent
+                        ? 'Provide details about the room and flatmates to find the right roommate'
+                        : 'Provide detailed information about your property to attract potential tenants'})</Label>
                     <Textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Describe your property... (e.g., amenities, nearby facilities, furnishing details)"
                       className="mt-2 h-[120px] w-full resize-none overflow-y-auto"
                       rows={4}
                       required
                     />
-                    <p className="text-sm text-gray-500 mt-1">
-                      {isStudent
-                        ? 'Provide details about the room and flatmates to find the right roommate'
-                        : 'Provide detailed information about your property to attract potential tenants'}
-                    </p>
                   </div>
 
                   {/* Amenities Selection */}
