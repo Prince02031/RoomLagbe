@@ -13,6 +13,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import listingService from '../services/listing.service';
 import locationService from '../services/location.service';
 import amenityService from '../services/amenity.service';
+import bookingService from '../services/booking.service';
 import { formatCurrency, formatDate, calculateCommute, getFairRentColor, getFairRentLabel } from '../lib/utils';
 import { useApp } from '../context/AppContext';
 import { toast } from 'sonner';
@@ -35,6 +36,8 @@ export default function ListingDetailsPage() {
   const [visitDate, setVisitDate] = useState('');
   const [visitTime, setVisitTime] = useState('');
   const [amenities, setAmenities] = useState([]);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchListingAndData = async () => {
@@ -112,6 +115,13 @@ export default function ListingDetailsPage() {
   const availabilityDate = listing.available_from || listing.availabilityDate || listing.availableFrom;
 
   const handleWishlistToggle = () => {
+    // Redirect to login if not authenticated
+    if (!currentUser) {
+      toast.info('Please login to add items to wishlist');
+      navigate('/login');
+      return;
+    }
+    
     if (isWishlisted) {
       removeFromWishlist(listingId);
       toast.success('Removed from wishlist');
@@ -138,12 +148,48 @@ export default function ListingDetailsPage() {
     }
   };
 
-  const handleBookVisit = () => {
+  const handleBookVisit = async () => {
     if (!visitDate || !visitTime) {
       toast.error('Please select date and time');
       return;
     }
-    toast.success('Visit request sent! The owner will contact you.');
+
+    // Check if user is logged in
+    if (!currentUser) {
+      toast.error('Please login to send a visit request');
+      navigate('/login');
+      return;
+    }
+
+    setBookingLoading(true);
+    try {
+      // Combine date and time into a single timestamp and get timezone offset
+      const localDateTime = new Date(`${visitDate}T${visitTime}`);
+      const timezoneOffset = -localDateTime.getTimezoneOffset(); // in minutes
+      const offsetHours = Math.floor(Math.abs(timezoneOffset) / 60);
+      const offsetMinutes = Math.abs(timezoneOffset) % 60;
+      const offsetSign = timezoneOffset >= 0 ? '+' : '-';
+      const timezoneString = `${offsetSign}${String(offsetHours).padStart(2, '0')}:${String(offsetMinutes).padStart(2, '0')}`;
+      const visitDateTime = `${visitDate}T${visitTime}${timezoneString}`;
+      
+      await bookingService.create({
+        listing_id: listingId,
+        visit_time: visitDateTime,
+        start_date: visitDate,
+        end_date: visitDate
+      });
+      
+      toast.success('Visit request sent successfully! The owner will review your request.');
+      setDialogOpen(false);
+      setVisitDate('');
+      setVisitTime('');
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      const errorMessage = error?.message || error?.error || error?.toString() || 'Failed to send visit request. Please try again.';
+      toast.error(errorMessage);
+    } finally {
+      setBookingLoading(false);
+    }
   };
 
   return (
@@ -322,7 +368,7 @@ export default function ListingDetailsPage() {
 
                 {/* Request Visit - Only show for students, and hide if they created this listing */}
                 {currentUser?.role === 'student' && (currentUser?.user_id || currentUser?.id) !== listing.creator_id && (
-                  <Dialog>
+                  <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                     <DialogTrigger asChild>
                       <Button className="w-full">Request Visit</Button>
                     </DialogTrigger>
@@ -338,6 +384,7 @@ export default function ListingDetailsPage() {
                             value={visitDate}
                             onChange={(e) => setVisitDate(e.target.value)}
                             className="mt-2"
+                            min={new Date().toISOString().split('T')[0]}
                           />
                         </div>
                         <div>
@@ -349,8 +396,19 @@ export default function ListingDetailsPage() {
                             className="mt-2"
                           />
                         </div>
-                        <Button onClick={handleBookVisit} className="w-full">
-                          Send Request
+                        <Button 
+                          onClick={handleBookVisit} 
+                          className="w-full"
+                          disabled={bookingLoading}
+                        >
+                          {bookingLoading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Sending...
+                            </>
+                          ) : (
+                            'Send Request'
+                          )}
                         </Button>
                       </div>
                     </DialogContent>

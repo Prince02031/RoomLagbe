@@ -50,13 +50,17 @@ export default function OwnerDashboard() {
 
   const handleUpdateBookingStatus = async (bookingId, status) => {
     try {
+      console.log('Updating booking:', bookingId, 'to status:', status);
       await bookingService.updateStatus(bookingId, status);
       toast.success(`Booking ${status} successfully`);
       // Refresh bookings
       const data = await bookingService.getOwnerBookings();
       setBookings(data);
     } catch (error) {
-      toast.error(`Failed to ${status} booking`);
+      console.error('Error updating booking status:', error);
+      console.error('Error response:', error.response?.data);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || `Failed to ${status} booking`;
+      toast.error(errorMessage);
     }
   };
 
@@ -200,31 +204,53 @@ export default function OwnerDashboard() {
                 <Card key={booking.booking_id}>
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-semibold text-lg">{booking.listing_title || 'Listing'}</h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                          Requested by: {booking.student_name || 'Student'}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Visit Date: {formatDate(booking.visit_date)} at {booking.visit_time}
-                        </p>
-                        {booking.message && (
-                          <p className="text-sm text-gray-600 mt-2">Message: {booking.message}</p>
-                        )}
-                        <div className="mt-2">
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-semibold text-lg">
+                              {booking.apartment_title || booking.room_name || 'Listing'}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              {formatCurrency(booking.price_per_person)}/person
+                            </p>
+                          </div>
                           <Badge 
                             variant={
                               booking.status === 'approved' ? 'default' : 
                               booking.status === 'rejected' ? 'destructive' : 
                               'secondary'
                             }
+                            className="ml-4"
                           >
                             {booking.status}
                           </Badge>
                         </div>
+                        <div className="mt-3 space-y-1">
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Student:</span> {booking.student_name || 'Student'}
+                          </p>
+                          {booking.student_email && (
+                            <p className="text-sm text-gray-600">
+                              <span className="font-medium">Email:</span> {booking.student_email}
+                            </p>
+                          )}
+                          {booking.student_phone && (
+                            <p className="text-sm text-gray-600">
+                              <span className="font-medium">Phone:</span> {booking.student_phone}
+                            </p>
+                          )}
+                          {booking.visit_time && (
+                            <p className="text-sm text-gray-600">
+                              <span className="font-medium">Visit Time:</span> {new Date(booking.visit_time).toLocaleString()}
+                            </p>
+                          )}
+                          <p className="text-sm text-gray-500">
+                            Requested on: {formatDate(booking.created_at)}
+                          </p>
+                        </div>
                       </div>
-                      {booking.status === 'pending' && (
-                        <div className="flex space-x-2">
+                      {booking.status === 'pending' ? (
+                        <div className="flex space-x-2 ml-4">
                           <Button 
                             size="sm" 
                             onClick={() => handleUpdateBookingStatus(booking.booking_id, 'approved')}
@@ -241,7 +267,7 @@ export default function OwnerDashboard() {
                             Reject
                           </Button>
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   </CardContent>
                 </Card>

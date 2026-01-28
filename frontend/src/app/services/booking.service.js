@@ -21,7 +21,10 @@ const bookingService = {
             return response.data;
         } catch (error) {
             console.error('Error creating booking:', error);
-            throw error.response?.data || error;
+            console.error('Error response:', error.response);
+            console.error('Error data:', error.response?.data);
+            // Throw the error message from server or a default message
+            throw error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to create booking';
         }
     },
 
@@ -65,6 +68,24 @@ const bookingService = {
             return response.data;
         } catch (error) {
             console.error('Error updating booking status:', error);
+            throw error.response?.data || error;
+        }
+    },
+
+    /**
+     * Get approved visits for a listing on a specific date
+     * @param {string} listingId - Listing ID
+     * @param {string} date - Date in YYYY-MM-DD format
+     * @returns {Promise<Array>} List of approved visits
+     */
+    async getApprovedVisits(listingId, date) {
+        try {
+            const response = await api.get(`/bookings/listing/${listingId}/visits`, {
+                params: { date }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching approved visits:', error);
             throw error.response?.data || error;
         }
     }
