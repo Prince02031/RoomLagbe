@@ -28,10 +28,12 @@ export const BookingService = {
         
         if (conflict) {
           const conflictTime = new Date(conflict.visit_time).toLocaleString();
-          throw new Error(
-            `This time slot conflicts with an approved visit at ${conflictTime}. ` +
-            `Please choose a time at least 2 hours before or after existing visits.`
+          const error = new Error(
+            `This time slot is already booked. An approved visit is scheduled at ${conflictTime}, ` +
+            `which blocks the time until 2 hours after. Please choose a different time.`
           );
+          error.statusCode = 400;
+          throw error;
         }
       }
 
@@ -80,8 +82,8 @@ export const BookingService = {
       if (conflict) {
         const conflictTime = new Date(conflict.visit_time).toLocaleString();
         throw new Error(
-          `Cannot approve: This time slot conflicts with another approved visit at ${conflictTime}. ` +
-          `Please reject this request or ask the student to choose a different time.`
+          `This time has been booked by another user, please provide another time schedule. ` +
+          `The conflicting visit is at ${conflictTime}. Please reject this request or ask the student to choose a different time.`
         );
       }
     }

@@ -23,8 +23,8 @@ const bookingService = {
             console.error('Error creating booking:', error);
             console.error('Error response:', error.response);
             console.error('Error data:', error.response?.data);
-            // Throw the error message from server or a default message
-            throw error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to create booking';
+            // Re-throw the original error so the component can access error.response.data.message
+            throw error;
         }
     },
 

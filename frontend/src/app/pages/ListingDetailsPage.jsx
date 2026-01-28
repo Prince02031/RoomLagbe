@@ -185,7 +185,7 @@ export default function ListingDetailsPage() {
       setVisitTime('');
     } catch (error) {
       console.error('Error creating booking:', error);
-      const errorMessage = error?.message || error?.error || error?.toString() || 'Failed to send visit request. Please try again.';
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to send visit request. Please try again.';
       toast.error(errorMessage);
     } finally {
       setBookingLoading(false);

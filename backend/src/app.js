@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { config } from './config/env.js';
+import { errorHandler } from './middlewares/error.middleware.js';
 
 // Import all routes
 import authRoutes from './routes/auth.routes.js';
@@ -50,5 +51,8 @@ app.use('/api/locations', locationRoutes);
 app.use('/api/commute', commuteRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
+
+// Error handling middleware (must be last)
+app.use(errorHandler);
 
 export default app;
