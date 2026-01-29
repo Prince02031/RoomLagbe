@@ -48,9 +48,16 @@ export default function ListingDetailsPage() {
         setListing(data);
 
         // Fetch amenities for this listing
-        if (data.apartment_id) {
+        if (data.apartment_id && data.listing_type === 'apartment') {
           try {
             const amenitiesData = await amenityService.getByApartment(data.apartment_id);
+            setAmenities(amenitiesData);
+          } catch (amenityError) {
+            console.error('Error fetching amenities:', amenityError);
+          }
+        } else if (data.room_id && data.listing_type === 'room_share') {
+          try {
+            const amenitiesData = await amenityService.getByRoom(data.room_id);
             setAmenities(amenitiesData);
           } catch (amenityError) {
             console.error('Error fetching amenities:', amenityError);
@@ -330,7 +337,7 @@ export default function ListingDetailsPage() {
                 </div>
 
                 {/* Amenities */}
-                {isApartment && amenities.length > 0 && (
+                {amenities.length > 0 && (
                   <div className="pt-4 border-t">
                     <h3 className="font-semibold mb-2">Amenities</h3>
                     <div className="flex flex-wrap gap-2">

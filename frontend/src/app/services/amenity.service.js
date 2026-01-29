@@ -32,6 +32,20 @@ const amenityService = {
             throw error.response?.data || error;
         }
     },
+
+    /**
+     * Get amenities for a specific room
+     * @param {string} roomId - Room ID
+     * @returns {Promise<Array>} List of amenities for the room
+     */
+    async getByRoom(roomId) {
+        try {
+            const response = await api.get(`/amenities/room/${roomId}`);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error;
+        }
+    },
 };
 
 export default amenityService;
