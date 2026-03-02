@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Search, Filter, Bookmark, Loader2 } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Search, Filter, Bookmark, Loader2, MapPin } from 'lucide-react';
+import { MapContainer, TileLayer, CircleMarker, Popup, Circle, useMap } from 'react-leaflet';
 import Navbar from '../components/Navbar';
 import ListingCard from '../components/ListingCard';
 import { Button } from '../components/ui/button';
@@ -12,10 +13,45 @@ import { Switch } from '../components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import listingService from '../services/listing.service';
 import locationService from '../services/location.service';
+import { calculateDistance } from '../lib/utils';
 import { useApp } from '../context/AppContext';
 import { toast } from 'sonner';
 
+function MapFocusController({ focusCoordinates }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!Array.isArray(focusCoordinates) || focusCoordinates.length !== 2) {
+      return;
+    }
+
+    map.setView(focusCoordinates, 14, { animate: true });
+  }, [focusCoordinates, map]);
+
+  return null;
+}
+
+function MapFitToListings({ coordinates }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!Array.isArray(coordinates) || coordinates.length === 0) {
+      return;
+    }
+
+    if (coordinates.length === 1) {
+      map.setView(coordinates[0], 14, { animate: true });
+      return;
+    }
+
+    map.fitBounds(coordinates, { padding: [30, 30] });
+  }, [coordinates, map]);
+
+  return null;
+}
+
 export default function SearchPage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { addSavedSearch, currentUser, isAuthenticated } = useApp();
 
@@ -31,6 +67,9 @@ export default function SearchPage() {
   const [priceRange, setPriceRange] = useState([initialMinPrice, initialMaxPrice]);
   const [womenOnly, setWomenOnly] = useState(initialWomenOnly);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchSuggestions, setSearchSuggestions] = useState([]);
+  const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
+  const [searchingSuggestions, setSearchingSuggestions] = useState(false);
 
   // Data states
   const [listings, setListings] = useState([]);
@@ -41,6 +80,10 @@ export default function SearchPage() {
   // Save search dialog
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [searchName, setSearchName] = useState('');
+  const [showMap, setShowMap] = useState(false);
+  const [selectedSearchCoordinates, setSelectedSearchCoordinates] = useState(null);
+  const [searchRadiusKm, setSearchRadiusKm] = useState(5);
+  const [fallbackCoordinates, setFallbackCoordinates] = useState({});
 
   // Fetch locations on mount
   useEffect(() => {
@@ -54,6 +97,63 @@ export default function SearchPage() {
     };
     fetchLocations();
   }, []);
+
+  // OpenStreetMap suggestions for search bar
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 3) {
+      setSearchSuggestions([]);
+      setSearchingSuggestions(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(async () => {
+      setSearchingSuggestions(true);
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(query)}&limit=8`,
+          {
+            signal: controller.signal,
+            headers: { Accept: 'application/json' },
+          }
+        );
+
+        if (!response.ok) {
+          setSearchSuggestions([]);
+          return;
+        }
+
+        const data = await response.json();
+        const suggestions = Array.isArray(data)
+          ? data.map((item, index) => {
+            const displayName = item.display_name || '';
+            const shortName = displayName.split(',')[0]?.trim() || displayName;
+            return {
+              id: `${index}`,
+              shortName,
+              displayName,
+              latitude: Number.parseFloat(item.lat),
+              longitude: Number.parseFloat(item.lon),
+            };
+          })
+          : [];
+
+        setSearchSuggestions(suggestions);
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          setSearchSuggestions([]);
+        }
+      } finally {
+        setSearchingSuggestions(false);
+      }
+    }, 250);
+
+    return () => {
+      controller.abort();
+      clearTimeout(timeoutId);
+    };
+  }, [searchQuery]);
 
   // Fetch listings when filters change
   useEffect(() => {
@@ -73,8 +173,27 @@ export default function SearchPage() {
         const data = await listingService.getAll(filters);
         let fetchedListings = data.listings || data || [];
 
+        // Radius-based location filter when a place is selected from OSM suggestions
+        if (selectedSearchCoordinates && Array.isArray(fetchedListings)) {
+          const [centerLat, centerLng] = selectedSearchCoordinates;
+          fetchedListings = fetchedListings.filter((listing) => {
+            if (!listing || listing.availability_status !== 'available') {
+              return false;
+            }
+
+            const lat = Number.parseFloat(listing.latitude ?? listing.location?.latitude);
+            const lng = Number.parseFloat(listing.longitude ?? listing.location?.longitude);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+              return false;
+            }
+
+            const distanceKm = calculateDistance(centerLat, centerLng, lat, lng);
+            return distanceKm <= searchRadiusKm;
+          });
+        }
+
         // Client-side search query filter
-        if (searchQuery && Array.isArray(fetchedListings)) {
+        if (!selectedSearchCoordinates && searchQuery && Array.isArray(fetchedListings)) {
           const searchLower = searchQuery.toLowerCase();
           fetchedListings = fetchedListings.filter(listing => {
             if (!listing) return false;
@@ -101,7 +220,7 @@ export default function SearchPage() {
     };
 
     fetchListings();
-  }, [listingType, location, priceRange, womenOnly, searchQuery]);
+  }, [listingType, location, priceRange, womenOnly, searchQuery, selectedSearchCoordinates, searchRadiusKm]);
 
   // Separate listings by type
   const safeListings = Array.isArray(listings) ? listings : [];
@@ -111,6 +230,115 @@ export default function SearchPage() {
   const filteredApartments = listingType === 'all' || listingType === 'apartment' ? apartments : [];
   const filteredRoomShares = listingType === 'all' || listingType === 'room-share' ? roomShares : [];
   const totalResults = filteredApartments.length + filteredRoomShares.length;
+
+  const visibleListings = [...filteredApartments, ...filteredRoomShares];
+
+  useEffect(() => {
+    const listingsMissingCoords = visibleListings.filter((listing) => {
+      const listingId = listing?.listing_id || listing?.id;
+      if (!listingId || fallbackCoordinates[listingId]) {
+        return false;
+      }
+
+      const lat = Number.parseFloat(listing?.latitude ?? listing?.location?.latitude);
+      const lng = Number.parseFloat(listing?.longitude ?? listing?.location?.longitude);
+      return !Number.isFinite(lat) || !Number.isFinite(lng);
+    });
+
+    if (listingsMissingCoords.length === 0) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const fetchMissingCoordinates = async () => {
+      const resolved = {};
+
+      await Promise.all(
+        listingsMissingCoords.map(async (listing) => {
+          const listingId = listing?.listing_id || listing?.id;
+          const locationQuery = listing?.location?.area_name || listing?.area_name || listing?.location;
+
+          if (!listingId || !locationQuery) {
+            return;
+          }
+
+          try {
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(locationQuery)}&limit=1`,
+              {
+                signal: controller.signal,
+                headers: { Accept: 'application/json' },
+              }
+            );
+
+            if (!response.ok) {
+              return;
+            }
+
+            const data = await response.json();
+            const bestMatch = Array.isArray(data) ? data[0] : null;
+
+            const lat = Number.parseFloat(bestMatch?.lat);
+            const lng = Number.parseFloat(bestMatch?.lon);
+
+            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+              resolved[listingId] = { latitude: lat, longitude: lng };
+            }
+          } catch (error) {
+            if (error.name !== 'AbortError') {
+              console.error('Geocoding listing location failed:', error);
+            }
+          }
+        })
+      );
+
+      if (Object.keys(resolved).length > 0) {
+        setFallbackCoordinates((prev) => ({ ...prev, ...resolved }));
+      }
+    };
+
+    fetchMissingCoordinates();
+
+    return () => {
+      controller.abort();
+    };
+  }, [visibleListings, fallbackCoordinates]);
+
+  const listingsForMap = visibleListings
+    .map((listing) => {
+      const listingId = listing?.listing_id || listing?.id;
+      const fallback = listingId ? fallbackCoordinates[listingId] : null;
+      const latitude = Number.parseFloat(
+        listing?.latitude
+        ?? listing?.location?.latitude
+        ?? fallback?.latitude
+        ?? selectedSearchCoordinates?.[0]
+      );
+      const longitude = Number.parseFloat(
+        listing?.longitude
+        ?? listing?.location?.longitude
+        ?? fallback?.longitude
+        ?? selectedSearchCoordinates?.[1]
+      );
+
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        return null;
+      }
+
+      return {
+        ...listing,
+        latitude,
+        longitude,
+      };
+    })
+    .filter(Boolean);
+
+  const mapCenter = listingsForMap.length > 0
+    ? [listingsForMap[0].latitude, listingsForMap[0].longitude]
+    : [23.8103, 90.4125];
+
+  const resolvedMapCenter = selectedSearchCoordinates || mapCenter;
 
   const handleSaveSearch = () => {
     if (!isAuthenticated) {
@@ -154,6 +382,8 @@ export default function SearchPage() {
     setPriceRange([0, 15000]);
     setWomenOnly(false);
     setSearchQuery('');
+    setSelectedSearchCoordinates(null);
+    setSearchRadiusKm(5);
   };
 
   return (
@@ -180,13 +410,64 @@ export default function SearchPage() {
                   <div className="relative mt-2">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                      placeholder="Search by location..."
+                      placeholder="Search places via OpenStreetMap..."
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setShowSearchSuggestions(true);
+                        setSelectedSearchCoordinates(null);
+                      }}
+                      onFocus={() => setShowSearchSuggestions(true)}
                       className="pl-10"
                     />
+
+                    {showSearchSuggestions && searchQuery.trim() && (
+                      <div className="absolute z-30 mt-1 w-full rounded-md border bg-white shadow-sm max-h-52 overflow-y-auto">
+                        {searchingSuggestions ? (
+                          <div className="px-3 py-2 text-sm text-gray-500">Searching OpenStreetMap...</div>
+                        ) : searchSuggestions.length > 0 ? (
+                          searchSuggestions.map((suggestion) => (
+                            <button
+                              key={suggestion.id}
+                              type="button"
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                              onClick={() => {
+                                setSearchQuery(suggestion.shortName);
+                                if (Number.isFinite(suggestion.latitude) && Number.isFinite(suggestion.longitude)) {
+                                  setSelectedSearchCoordinates([suggestion.latitude, suggestion.longitude]);
+                                }
+                                setShowSearchSuggestions(false);
+                              }}
+                            >
+                              {suggestion.displayName}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-3 py-2 text-sm text-gray-500">No matching places found</div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
+
+                {selectedSearchCoordinates && (
+                  <div>
+                    <Label>Radius: {searchRadiusKm} km</Label>
+                    <div className="mt-4 px-2">
+                      <Slider
+                        min={1}
+                        max={20}
+                        step={1}
+                        value={[searchRadiusKm]}
+                        onValueChange={(value) => setSearchRadiusKm(value[0])}
+                      />
+                      <div className="flex justify-between mt-2 text-sm text-gray-600">
+                        <span>1 km</span>
+                        <span>20 km</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Listing Type */}
                 <div>
@@ -263,11 +544,100 @@ export default function SearchPage() {
 
           {/* Results */}
           <div className="lg:col-span-3">
-            <div className="mb-6">
+            <div className="mb-6 flex items-center justify-between gap-3">
               <p className="text-gray-600">
                 Found <span className="font-semibold">{totalResults}</span> results
               </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowMap((prev) => !prev)}
+              >
+                <MapPin className="h-4 w-4 mr-1" />
+                {showMap ? 'Hide Map' : 'Map'}
+              </Button>
             </div>
+
+            {showMap && (
+              <Card className="mb-6 overflow-hidden">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center text-lg">
+                    <MapPin className="h-5 w-5 mr-2" />
+                    Listings Map
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {listingsForMap.length > 0 ? (
+                    <div className="h-[380px] rounded-md overflow-hidden border">
+                      <MapContainer
+                        center={resolvedMapCenter}
+                        zoom={13}
+                        scrollWheelZoom={true}
+                        className="h-full w-full"
+                      >
+                        <MapFocusController focusCoordinates={selectedSearchCoordinates} />
+                        <MapFitToListings coordinates={listingsForMap.map((item) => [item.latitude, item.longitude])} />
+                        <TileLayer
+                          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+
+                        {selectedSearchCoordinates && (
+                          <Circle
+                            center={selectedSearchCoordinates}
+                            radius={searchRadiusKm * 1000}
+                            pathOptions={{ color: '#2563eb', fillColor: '#2563eb', fillOpacity: 0.08 }}
+                          />
+                        )}
+
+                        {listingsForMap.map((listing) => {
+                          const listingId = listing?.listing_id || listing?.id;
+                          const listingTitle = listing?.title || listing?.apartment_title || listing?.room_name || 'Listing';
+                          const listingLocation = listing?.location?.area_name || listing?.area_name || listing?.location || 'Unknown location';
+                          const listingTypeValue = listing?.listing_type || 'apartment';
+                          const apartmentType = listing?.apartment_type || 'N/A';
+                          const maxOccupancy = listing?.max_occupancy || 'N/A';
+
+                          return (
+                            <CircleMarker
+                              key={`map-marker-${listingId}`}
+                              center={[listing.latitude, listing.longitude]}
+                              radius={9}
+                              pathOptions={{ color: '#2563eb', fillColor: '#3b82f6', fillOpacity: 0.7 }}
+                            >
+                              <Popup>
+                                <div className="space-y-2 min-w-[200px]">
+                                  <p className="font-medium text-sm">{listingTitle}</p>
+                                  <p className="text-xs text-gray-600">{listingLocation}</p>
+                                  <p className="text-xs font-semibold">৳{listing?.price_per_person || 0}/person</p>
+                                  {listingTypeValue === 'apartment' && (
+                                    <p className="text-xs text-gray-600">Type: {apartmentType} • Max: {maxOccupancy}</p>
+                                  )}
+                                  {listing?.women_only && (
+                                    <p className="text-xs text-gray-600">Women only</p>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    className="w-full"
+                                    onClick={() => navigate(`/listing/${listingId}?type=${listingTypeValue}`)}
+                                  >
+                                    View Details
+                                  </Button>
+                                </div>
+                              </Popup>
+                            </CircleMarker>
+                          );
+                        })}
+                      </MapContainer>
+                    </div>
+                  ) : (
+                    <div className="h-[180px] border rounded-md flex items-center justify-center text-gray-500 text-sm">
+                      No mappable locations found for current filters.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {loading ? (
               <div className="flex justify-center items-center py-16">

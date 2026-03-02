@@ -13,6 +13,9 @@ import WishlistPage from './pages/WishlistPage';
 import SavedSearchesPage from './pages/SavedSearchesPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import ProfilePage from './pages/ProfilePage';
+import ProfileVerificationPage from './pages/ProfileVerificationPage';
+import AdminVerificationsPage from './pages/admin/AdminVerificationsPage';
+import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage';
 
 export default function App() {
   return (
@@ -72,6 +75,30 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile/verification"
+              element={
+                <ProtectedRoute>
+                  <ProfileVerificationPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/verifications"
+              element={
+                <ProtectedRoute>
+                  <AdminVerificationsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/analytics"
+              element={
+                <ProtectedRoute>
+                  <AdminAnalyticsPage />
                 </ProtectedRoute>
               }
             />

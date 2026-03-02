@@ -1,0 +1,8 @@
+-- Migration: Add verification info columns to user table
+ALTER TABLE "user"
+ADD COLUMN IF NOT EXISTS student_id VARCHAR(100),
+ADD COLUMN IF NOT EXISTS university VARCHAR(200),
+ADD COLUMN IF NOT EXISTS student_proof VARCHAR(255),
+ADD COLUMN IF NOT EXISTS nid VARCHAR(100),
+ADD COLUMN IF NOT EXISTS ownership_proof VARCHAR(255),
+ADD COLUMN IF NOT EXISTS contact VARCHAR(50);

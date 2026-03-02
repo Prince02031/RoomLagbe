@@ -1,7 +1,11 @@
+
 import { ListingModel } from '../models/listing.model.js';
 import { ApartmentModel } from '../models/apartment.model.js';
 import { RoomModel } from '../models/room.model.js';
 import { AmenityModel } from '../models/amenity.model.js';
+import { ListingPhotoModel } from '../models/listingPhoto.model.js';
+import supabase from '../config/supabase.js';
+import { config } from '../config/env.js';
 
 export const ListingController = {
   // Get all listings (with optional filters)
@@ -23,7 +27,15 @@ export const ListingController = {
       if (!listing) {
         return res.status(404).json({ message: 'Listing not found' });
       }
-      res.json(listing);
+      const photos = await ListingPhotoModel.getByListing(id);
+      const photoUrls = photos.map((photo) => photo.photo_url).filter(Boolean);
+      const thumbnail = photos.find((photo) => photo.is_thumbnail)?.photo_url || photoUrls[0] || null;
+
+      res.json({
+        ...listing,
+        photos: photoUrls,
+        thumbnail,
+      });
     } catch (error) {
       res.status(500).json({ message: 'Error fetching listing', error: error.message });
     }
@@ -125,6 +137,74 @@ export const ListingController = {
   },
 
   addPhotos: async (req, res) => {
-    res.json({ message: 'Photo upload not implemented yet' });
+    try {
+      const listingId = req.body?.listingId || req.query?.listingId;
+      const files = Array.isArray(req.files) ? req.files : [];
+
+      if (!listingId) {
+        return res.status(400).json({ message: 'listingId is required' });
+      }
+      if (files.length === 0) {
+        return res.status(400).json({
+          message: 'No files uploaded',
+          debug: {
+            contentType: req.headers['content-type'],
+            bodyKeys: Object.keys(req.body || {}),
+          },
+        });
+      }
+
+      // Optionally, check if the user owns the listing
+      const listing = await ListingModel.findWithOwner(listingId);
+      if (!listing) {
+        return res.status(404).json({ message: 'Listing not found' });
+      }
+      if (listing.owner_id !== req.user.id) {
+        return res.status(403).json({ message: 'You are not authorized to add photos to this listing.' });
+      }
+
+      const uploadedPhotos = [];
+      const bucketName = config.listingPhotosBucket;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const ext = file.originalname.split('.').pop();
+        const filename = `${listingId}_${Date.now()}_${i}.${ext}`;
+        // Upload to Supabase Storage (listing-photos bucket)
+        const { data, error } = await supabase.storage
+          .from(bucketName)
+          .upload(filename, file.buffer, {
+            contentType: file.mimetype,
+            upsert: true
+          });
+        if (error) {
+          return res.status(500).json({
+            message: 'Error uploading photos',
+            error: error?.message || 'Supabase storage upload failed',
+            details: {
+              bucket: bucketName,
+              code: error?.code,
+              statusCode: error?.statusCode || error?.status,
+            },
+          });
+        }
+        // Get public URL
+        const { data: publicUrlData } = supabase.storage.from(bucketName).getPublicUrl(filename);
+        const photoUrl = publicUrlData.publicUrl;
+        // Save to DB
+        const photo = await ListingPhotoModel.add(listingId, photoUrl, i === 0); // First photo is thumbnail
+        uploadedPhotos.push(photo);
+      }
+      res.json({ message: 'Photos uploaded', photos: uploadedPhotos });
+    } catch (error) {
+      res.status(500).json({
+        message: 'Error uploading photos',
+        error: error?.message || 'Unknown upload error',
+        details: {
+          name: error?.name,
+          statusCode: error?.statusCode || error?.status,
+          code: error?.code,
+        },
+      });
+    }
   }
 };

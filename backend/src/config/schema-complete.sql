@@ -41,6 +41,13 @@ CREATE TABLE IF NOT EXISTS "user" (
   phone                VARCHAR(20) UNIQUE,
   role                 user_role NOT NULL,
   verification_status  verification_status NOT NULL DEFAULT 'unverified',
+  -- Verification info fields
+  student_id           VARCHAR(100),
+  university           VARCHAR(200),
+  student_proof        VARCHAR(255),
+  nid                  VARCHAR(100),
+  ownership_proof      VARCHAR(255),
+  contact              VARCHAR(50),
   created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at           TIMESTAMPTZ NOT NULL DEFAULT now()
 );

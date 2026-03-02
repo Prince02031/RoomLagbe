@@ -65,6 +65,40 @@ const listingService = {
     },
 
     /**
+     * Upload photos for an existing listing
+     * @param {string} listingId - Listing ID
+     * @param {File[]} files - Image files
+     * @returns {Promise<Object>} Upload response
+     */
+    async uploadPhotos(listingId, files = []) {
+        try {
+            const formData = new FormData();
+            formData.append('listingId', listingId);
+            files.forEach((file) => formData.append('photos', file));
+
+            const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+            const token = localStorage.getItem('token');
+
+            const response = await fetch(`${baseUrl}/listings/photos?listingId=${encodeURIComponent(listingId)}`, {
+                method: 'POST',
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                body: formData,
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                const message = data?.error || data?.message || 'Failed to upload photos';
+                throw { message, ...data };
+            }
+
+            return data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    /**
      * Update a listing
      * @param {string} id - Listing ID
      * @param {Object} updates - Updated data

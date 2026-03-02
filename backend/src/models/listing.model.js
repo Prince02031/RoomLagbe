@@ -7,13 +7,19 @@ export const ListingModel = {
       SELECT l.*, 
              COALESCE(a.title, ra.title) as apartment_title, 
              r.room_name,
+              lp.photo_url as thumbnail,
              COALESCE(loc.area_name, rloc.area_name) as location,
+              COALESCE(loc.latitude, rloc.latitude) as latitude,
+              COALESCE(loc.longitude, rloc.longitude) as longitude,
              COALESCE(a.available_from, ra.available_from) as available_from,
              COALESCE(a.apartment_type, ra.apartment_type) as apartment_type,
              COALESCE(a.max_occupancy, ra.max_occupancy) as max_occupancy,
              COALESCE(u_owner.name, u_student.name) as owner_name,
              COALESCE(u_owner.phone, u_student.phone) as owner_phone,
              COALESCE(u_owner.email, u_student.email) as owner_email,
+                  u_owner.verification_status as owner_verification_status,
+                  u_student.verification_status as student_verification_status,
+                  COALESCE(u_owner.verification_status, u_student.verification_status) as poster_verification_status,
              COALESCE(a.owner_id, r.std_id) as creator_id
       FROM listing l
       LEFT JOIN apartment a ON l.apartment_id = a.apartment_id
@@ -21,6 +27,7 @@ export const ListingModel = {
       LEFT JOIN apartment ra ON r.apartment_id = ra.apartment_id
       LEFT JOIN location loc ON a.location_id = loc.location_id
       LEFT JOIN location rloc ON ra.location_id = rloc.location_id
+      LEFT JOIN listing_photo lp ON l.listing_id = lp.listing_id AND lp.is_thumbnail = true
       LEFT JOIN "user" u_owner ON (a.owner_id = u_owner.user_id)
       LEFT JOIN "user" u_student ON (r.std_id = u_student.user_id)
       WHERE 1=1
@@ -84,6 +91,9 @@ export const ListingModel = {
              COALESCE(u_owner.name, u_student.name) as owner_name, 
              COALESCE(u_owner.email, u_student.email) as owner_email, 
              COALESCE(u_owner.phone, u_student.phone) as owner_phone,
+                  u_owner.verification_status as owner_verification_status,
+                  u_student.verification_status as student_verification_status,
+                  COALESCE(u_owner.verification_status, u_student.verification_status) as poster_verification_status,
              COALESCE(a.owner_id, r.std_id) as creator_id
       FROM listing l
       LEFT JOIN apartment a ON l.apartment_id = a.apartment_id
@@ -96,6 +106,21 @@ export const ListingModel = {
       WHERE l.listing_id = $1
     `;
     const result = await pool.query(query, [id]);
+    return result.rows[0];
+  },
+
+  findWithOwner: async (listingId) => {
+    const query = `
+      SELECT l.*, 
+             COALESCE(a.owner_id, ra.owner_id, r.std_id) as owner_id,
+             COALESCE(a.apartment_id, ra.apartment_id) as apartment_id
+      FROM listing l
+      LEFT JOIN apartment a ON l.apartment_id = a.apartment_id
+      LEFT JOIN room r ON l.room_id = r.room_id
+      LEFT JOIN apartment ra ON r.apartment_id = ra.apartment_id
+      WHERE l.listing_id = $1
+    `;
+    const result = await pool.query(query, [listingId]);
     return result.rows[0];
   },
 

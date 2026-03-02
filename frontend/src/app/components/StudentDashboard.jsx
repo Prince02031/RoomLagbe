@@ -54,6 +54,8 @@ export default function StudentDashboard() {
     fetchBookings();
   }, []);
 
+  const initialTab = 'listings';
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-20">
@@ -123,7 +125,7 @@ export default function StudentDashboard() {
       </div>
 
       {/* My Listings */}
-      <Tabs defaultValue="listings">
+      <Tabs defaultValue={initialTab}>
         <TabsList>
           <TabsTrigger value="listings">My Listings</TabsTrigger>
           <TabsTrigger value="sent-requests">My Visit Requests</TabsTrigger>
@@ -357,6 +359,7 @@ export default function StudentDashboard() {
             )}
           </div>
         </TabsContent>
+
       </Tabs>
     </div>
   );

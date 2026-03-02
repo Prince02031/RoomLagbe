@@ -218,6 +218,10 @@ export default function LoginPage() {
                         <RadioGroupItem value="owner" id="owner" disabled={registerLoading} />
                         <Label htmlFor="owner">Property Owner</Label>
                       </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="admin" id="admin" disabled={registerLoading} />
+                        <Label htmlFor="admin">Admin</Label>
+                      </div>
                     </RadioGroup>
                   </div>
                   <Button type="submit" className="w-full" disabled={registerLoading}>

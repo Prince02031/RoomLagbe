@@ -18,4 +18,10 @@ router.get('/listings/pending', AdminController.getPendingListings);
 router.patch('/listings/:id/approve', AdminController.approveListing);
 router.patch('/listings/:id/reject', AdminController.rejectListing);
 
+// User verification
+router.get('/users/pending/students', AdminController.getPendingStudents);
+router.get('/users/pending/owners', AdminController.getPendingOwners);
+router.patch('/users/:id/approve', AdminController.approveUser);
+router.patch('/users/:id/reject', AdminController.rejectUser);
+
 export default router;

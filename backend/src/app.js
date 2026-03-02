@@ -17,6 +17,7 @@ import locationRoutes from './routes/location.routes.js';
 import commuteRoutes from './routes/commute.routes.js';
 import userRoutes from './routes/user.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 
 const app = express();
 
@@ -51,6 +52,7 @@ app.use('/api/locations', locationRoutes);
 app.use('/api/commute', commuteRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

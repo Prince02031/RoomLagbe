@@ -1,6 +1,7 @@
 import { BookingModel } from '../models/booking.model.js';
 import { ListingModel } from '../models/listing.model.js';
 import { BOOKING_STATUS, LISTING_STATUS } from '../constants/listingStatus.js';
+import { NotificationModel } from '../models/notification.model.js';
 
 export const BookingService = {
   createBooking: async (bookingData) => {
@@ -90,6 +91,16 @@ export const BookingService = {
 
     // 6. Update the booking status
     const updatedBooking = await BookingModel.updateStatus(bookingId, status);
+
+    if (status === BOOKING_STATUS.APPROVED && booking.std_id) {
+      await NotificationModel.create({
+        user_id: booking.std_id,
+        type: 'visit_request_approved',
+        title: 'Visit Request Approved',
+        message: 'Your room visit request has been approved by the listing owner.',
+        meta: { booking_id: bookingId, listing_id: booking.listing_id },
+      });
+    }
 
     // 7. If approved, don't change listing status anymore (visit requests don't book the listing)
     // We only reject other pending bookings for this specific time if needed
