@@ -8,5 +8,7 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   supabaseUrl: process.env.SUPABASE_URL,
-  supabaseKey: process.env.SUPABASE_KEY
+  supabaseKey: process.env.SUPABASE_KEY,
+  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  listingPhotosBucket: process.env.SUPABASE_LISTING_PHOTOS_BUCKET || 'listing-photos'
 };

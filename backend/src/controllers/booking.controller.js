@@ -1,4 +1,5 @@
 import { BookingService } from '../services/booking.service.js';
+import { NotificationModel } from '../models/notification.model.js';
 
 export const BookingController = {
   create: async (req, res, next) => {
@@ -8,6 +9,15 @@ export const BookingController = {
       const bookingData = { ...req.body, std_id: req.user.id };
       console.log('Final booking data:', bookingData);
       const booking = await BookingService.createBooking(bookingData);
+
+      await NotificationModel.create({
+        user_id: req.user.id,
+        type: 'visit_request_submitted',
+        title: 'Visit Request Sent',
+        message: 'Your room visit request has been sent successfully.',
+        meta: { booking_id: booking.booking_id, listing_id: booking.listing_id },
+      });
+
       console.log('Booking created successfully:', booking);
       res.status(201).json(booking);
     } catch (err) {

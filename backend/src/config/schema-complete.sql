@@ -41,6 +41,13 @@ CREATE TABLE IF NOT EXISTS "user" (
   phone                VARCHAR(20) UNIQUE,
   role                 user_role NOT NULL,
   verification_status  verification_status NOT NULL DEFAULT 'unverified',
+  -- Verification info fields
+  student_id           VARCHAR(100),
+  university           VARCHAR(200),
+  student_proof        VARCHAR(255),
+  nid                  VARCHAR(100),
+  ownership_proof      VARCHAR(255),
+  contact              VARCHAR(50),
   created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at           TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -125,6 +132,7 @@ CREATE TABLE IF NOT EXISTS apartment (
   available_from    DATE,
   
   verification_status  verification_status NOT NULL DEFAULT 'pending',
+  creator_role         user_role NOT NULL DEFAULT 'owner',
 
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -237,6 +245,7 @@ CREATE TABLE IF NOT EXISTS booking (
 
   start_date   DATE NOT NULL,
   end_date     DATE NOT NULL,
+  visit_time   TIMESTAMPTZ,
   status       booking_status NOT NULL DEFAULT 'pending',
 
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -289,7 +298,8 @@ CREATE TABLE IF NOT EXISTS wishlist (
 CREATE TABLE IF NOT EXISTS saved_search (
   saved_search_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id         UUID NOT NULL REFERENCES "user"(user_id) ON DELETE CASCADE,
-  criteria        JSONB NOT NULL,      -- Store search filters as JSON
+  name            TEXT,                  -- User-friendly name for the search
+  criteria        JSONB NOT NULL,        -- Store search filters as JSON
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

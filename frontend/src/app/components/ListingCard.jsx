@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Heart, MapPin, Users, Home, Calendar, Star } from 'lucide-react';
+import { Heart, MapPin, Users, Home, Calendar, Star, CheckCircle2 } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -22,9 +22,17 @@ export default function ListingCard({ listing, type }) {
   const apartmentType = listing?.apartment_type || listing?.apartmentType;
   const maxOccupancy = listing?.max_occupancy || listing?.maxOccupancy;
   const womenOnly = listing?.women_only !== undefined ? listing?.women_only : listing?.womenOnly;
+  const isApartmentListing = type === 'apartment' || listing?.listing_type === 'apartment';
   const fairRentScore = listing?.fair_rent_score !== undefined ? listing?.fair_rent_score : listing?.fairRentScore;
   const ownerName = listing?.owner_name || listing?.ownerName || 'Property Owner';
   const studentName = listing?.student_name || listing?.studentName || 'Student';
+  const postedByName = isApartmentListing ? ownerName : studentName;
+  const isPosterVerified = [
+    listing?.poster_verification_status,
+    listing?.owner_verification_status,
+    listing?.student_verification_status,
+    listing?.verification_status,
+  ].includes('verified');
   const photos = listing?.photos || [];
   const thumbnail = photos.length > 0 ? photos[0] : (listing?.thumbnail || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=800&auto=format&fit=crop');
 
@@ -55,7 +63,7 @@ export default function ListingCard({ listing, type }) {
   };
 
   const isApartment = () => {
-    return type === 'apartment' || listing?.listing_type === 'apartment';
+    return isApartmentListing;
   };
 
   return (
@@ -143,8 +151,9 @@ export default function ListingCard({ listing, type }) {
           </div>
 
           {/* Owner/Student Name */}
-          <p className="text-sm text-gray-500">
-            Posted by {ownerName}
+          <p className="text-sm text-gray-500 flex items-center gap-1.5">
+            <span>Posted by {postedByName}</span>
+            {isPosterVerified && <CheckCircle2 className="h-4 w-4 text-blue-600" aria-label="Verified" />}
           </p>
 
           <Button className="w-full mt-2">View Details</Button>

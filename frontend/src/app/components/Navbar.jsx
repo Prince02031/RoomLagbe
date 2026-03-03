@@ -1,6 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Search, Heart, Bookmark, LayoutDashboard, BarChart3, User, LogOut, LogIn } from 'lucide-react';
+import { Home, Search, Heart, Bookmark, LayoutDashboard, BarChart3, User, LogOut, LogIn, ShieldCheck, Bell } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Button } from './ui/button';
+import { Card, CardContent } from './ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,11 +13,46 @@ import {
 } from './ui/dropdown-menu';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { useApp } from '../context/AppContext';
+import notificationService from '../services/notification.service';
 import { toast } from 'sonner';
 
 export default function Navbar() {
   const navigate = useNavigate();
   const { currentUser, isAuthenticated, logout } = useApp();
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  const fetchNotifications = async () => {
+    if (!isAuthenticated || currentUser?.role !== 'student') {
+      setUnreadNotifications(0);
+      setNotifications([]);
+      return;
+    }
+
+    try {
+      setNotificationsLoading(true);
+      const data = await notificationService.getMyNotifications();
+      const rows = Array.isArray(data) ? data : [];
+      setNotifications(rows);
+      setUnreadNotifications(rows.filter((n) => !n.is_read).length);
+    } catch (error) {
+      console.error('Error loading navbar notifications:', error);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [isAuthenticated, currentUser?.role]);
+
+  useEffect(() => {
+    if (notificationsOpen) {
+      fetchNotifications();
+    }
+  }, [notificationsOpen]);
 
   const getInitials = (name) => {
     if (!name) return 'U';
@@ -67,11 +104,99 @@ export default function Navbar() {
                   <LayoutDashboard className="h-4 w-4 mr-2" />
                   Dashboard
                 </Button>
+                {currentUser?.role === 'student' && (
+                  <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="relative">
+                        <Bell className="h-4 w-4 mr-2" />
+                        Notifications
+                        {unreadNotifications > 0 && (
+                          <span className="ml-2 inline-flex items-center justify-center min-w-5 h-5 rounded-full bg-blue-600 text-white text-xs px-1.5">
+                            {unreadNotifications}
+                          </span>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-[420px] p-3" align="end" sideOffset={8}>
+                      <div className="flex items-center justify-between pb-2">
+                        <p className="font-semibold text-sm">Notifications</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              await notificationService.markAllAsRead();
+                              setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+                              setUnreadNotifications(0);
+                              toast.success('All notifications marked as read');
+                            } catch (error) {
+                              console.error('Error marking notifications:', error);
+                              toast.error('Failed to mark notifications as read');
+                            }
+                          }}
+                          disabled={unreadNotifications === 0}
+                        >
+                          Mark all read
+                        </Button>
+                      </div>
+
+                      <div className="max-h-[60vh] overflow-y-auto space-y-3 pr-1">
+                        {notificationsLoading ? (
+                          <p className="text-sm text-gray-500">Loading notifications...</p>
+                        ) : notifications.length === 0 ? (
+                          <p className="text-sm text-gray-500">No notifications yet.</p>
+                        ) : (
+                          notifications.map((notification) => (
+                            <Card key={notification.notification_id} className={!notification.is_read ? 'border-blue-200 bg-blue-50/30' : ''}>
+                              <CardContent className="p-4 flex items-start justify-between gap-3">
+                                <div>
+                                  <p className="font-semibold text-sm text-gray-900">{notification.title}</p>
+                                  <p className="text-sm text-gray-700 mt-1">{notification.message}</p>
+                                  <p className="text-xs text-gray-500 mt-2">{new Date(notification.created_at).toLocaleString()}</p>
+                                </div>
+                                {!notification.is_read && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={async () => {
+                                      try {
+                                        await notificationService.markAsRead(notification.notification_id);
+                                        setNotifications((prev) =>
+                                          prev.map((item) =>
+                                            item.notification_id === notification.notification_id
+                                              ? { ...item, is_read: true }
+                                              : item
+                                          )
+                                        );
+                                        setUnreadNotifications((prev) => Math.max(0, prev - 1));
+                                      } catch (error) {
+                                        console.error('Error marking notification as read:', error);
+                                        toast.error('Failed to update notification');
+                                      }
+                                    }}
+                                  >
+                                    Mark read
+                                  </Button>
+                                )}
+                              </CardContent>
+                            </Card>
+                          ))
+                        )}
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
                 {currentUser?.role === 'admin' && (
-                  <Button variant="ghost" onClick={() => navigate('/analytics')}>
-                    <BarChart3 className="h-4 w-4 mr-2" />
-                    Analytics
-                  </Button>
+                  <>
+                    <Button variant="ghost" onClick={() => navigate('/admin/verifications')}>
+                      <ShieldCheck className="h-4 w-4 mr-2" />
+                      Verifications
+                    </Button>
+                    <Button variant="ghost" onClick={() => navigate('/admin/analytics')}>
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      Analytics
+                    </Button>
+                  </>
                 )}
               </>
             )}

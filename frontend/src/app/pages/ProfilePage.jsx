@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CheckCircle, Eye, EyeOff, Lock } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { Button } from '../components/ui/button';
+// ...existing code...
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -17,10 +19,11 @@ import {
   AlertDialogTitle,
 } from '../components/ui/alert-dialog';
 import { useApp } from '../context/AppContext';
-import userService from '../services/user.service';
+import userService from '../services/user.service.jsx';
 import { toast } from 'sonner';
 
 export default function ProfilePage() {
+  const navigate = useNavigate();
   const { currentUser, setCurrentUser } = useApp();
   const [name, setName] = useState(currentUser?.name || '');
   const [email, setEmail] = useState(currentUser?.email || '');
@@ -306,15 +309,26 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Status</span>
-                  {currentUser?.verified ? (
+                  {currentUser?.verification_status === 'verified' ? (
                     <Badge variant="outline" className="text-green-600">
                       <CheckCircle className="h-4 w-4 mr-1" />
                       Verified
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="text-gray-600">
-                      Pending Verification
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-gray-600">
+                        {currentUser?.verification_status === 'pending' ? 'Pending Verification' : 'Not Verified'}
+                      </Badge>
+                      {(currentUser?.role === 'student' || currentUser?.role === 'owner') && currentUser?.verification_status !== 'pending' && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => navigate('/profile/verification')}
+                        >
+                          Apply for Verification
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

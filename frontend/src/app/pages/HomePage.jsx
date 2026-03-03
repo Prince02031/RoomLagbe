@@ -64,8 +64,7 @@ export default function HomePage() {
               </Button>
               <Button
                 size="lg"
-                variant="outline"
-                className="border-white text-white hover:bg-white/10"
+                className="bg-white text-blue-600 hover:bg-gray-100"
                 onClick={() => navigate('/create-listing')}
               >
                 {currentUser?.role === 'student' ? 'Post a Room' : currentUser?.role === 'owner' ? 'Post an Apartment' : 'Post a Listing'}

@@ -1,11 +1,19 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { UserModel } from '../models/user.model.js';
+import { ROLES } from '../constants/roles.js';
 
 export const register = async (req, res) => {
   const { username, password, name, email, phone, role } = req.body;
 
   try {
+    const normalizedRole = String(role || ROLES.STUDENT).toLowerCase();
+    const allowedRoles = [ROLES.STUDENT, ROLES.OWNER, ROLES.ADMIN];
+
+    if (!allowedRoles.includes(normalizedRole)) {
+      return res.status(400).json({ message: 'Invalid role. Allowed roles: student, owner, admin' });
+    }
+
     // 1. Check if user exists (DB query)
     const existingUser = await UserModel.findByUsername(username);
 
@@ -24,7 +32,7 @@ export const register = async (req, res) => {
       name: name || username,
       email,
       phone,
-      role: role || 'student'  // lowercase for enum
+      role: normalizedRole
     });
 
     res.status(201).json({

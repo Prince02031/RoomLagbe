@@ -96,15 +96,15 @@ export default function LoginPage() {
         <Card>
           <Tabs defaultValue="login">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
+              <TabsTrigger value="login" className="font-semibold py-3 px-6">Login</TabsTrigger>
+              <TabsTrigger value="register" className="font-semibold py-3 px-6">Register</TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
               <CardHeader>
                 <CardTitle>Welcome Back</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div>
                     <Label>Username</Label>
@@ -141,7 +141,7 @@ export default function LoginPage() {
               <CardHeader>
                 <CardTitle>Create Account</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <form onSubmit={handleRegister} className="space-y-4">
                   <div>
                     <Label>Username</Label>
@@ -217,6 +217,10 @@ export default function LoginPage() {
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="owner" id="owner" disabled={registerLoading} />
                         <Label htmlFor="owner">Property Owner</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="admin" id="admin" disabled={registerLoading} />
+                        <Label htmlFor="admin">Admin</Label>
                       </div>
                     </RadioGroup>
                   </div>

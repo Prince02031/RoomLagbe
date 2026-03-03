@@ -1,6 +1,8 @@
+
 import { UserModel } from '../models/user.model.js';
 import { pool } from '../config/db.js';
 import bcrypt from 'bcryptjs';
+import supabase from '../config/supabase.js';
 
 export const UserController = {
   getProfile: async (req, res, next) => {
@@ -81,10 +83,56 @@ export const UserController = {
     try {
       const user = await UserModel.findById(req.params.id);
       if (!user) return res.status(404).json({ message: 'User not found' });
-      
       // Remove password from response
       const { password, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // Handle verification submission
+  submitVerification: async (req, res, next) => {
+    try {
+      const { role, id: userId } = req.user;
+      let updateFields = { verification_status: 'pending' };
+
+      // Helper to upload a file buffer to Supabase Storage
+      async function uploadToSupabase(file, folder) {
+        const ext = file.originalname.split('.').pop();
+        const filename = `${userId}_${Date.now()}.${ext}`;
+        const { data, error } = await supabase.storage
+          .from('verification')
+          .upload(`${folder}/${filename}`, file.buffer, {
+            contentType: file.mimetype,
+            upsert: true
+          });
+        if (error) throw error;
+        // Get public URL
+        const { data: publicUrlData } = supabase.storage.from('verification').getPublicUrl(`${folder}/${filename}`);
+        return publicUrlData.publicUrl;
+      }
+
+      if (role === 'student') {
+        updateFields.student_id = req.body.studentId;
+        updateFields.university = req.body.university;
+        if (req.files && req.files.studentProof && req.files.studentProof[0]) {
+          const file = req.files.studentProof[0];
+          updateFields.student_proof = await uploadToSupabase(file, 'student');
+        }
+      } else if (role === 'owner') {
+        updateFields.nid = req.body.ownerNid;
+        updateFields.contact = req.body.contact;
+        if (req.files && req.files.ownershipProof && req.files.ownershipProof[0]) {
+          const file = req.files.ownershipProof[0];
+          updateFields.ownership_proof = await uploadToSupabase(file, 'owner');
+        }
+      } else {
+        return res.status(400).json({ message: 'Verification not supported for this role.' });
+      }
+      // Save verification info to user
+      const updatedUser = await UserModel.update(userId, updateFields);
+      res.json({ message: 'Verification info submitted', user: updatedUser });
     } catch (err) {
       next(err);
     }

@@ -14,7 +14,7 @@ const authService = {
      * @param {string} userData.name - Full name
      * @param {string} userData.email - Email address
      * @param {string} userData.phone - Phone number
-     * @param {string} userData.role - User role (student/owner)
+    * @param {string} userData.role - User role (student/owner/admin)
      * @returns {Promise<Object>} User data
      */
     async register(userData) {

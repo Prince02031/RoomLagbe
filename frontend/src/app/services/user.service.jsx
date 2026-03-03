@@ -68,6 +68,23 @@ const userService = {
             console.error('Error fetching user:', error);
             throw error.response?.data || error;
         }
+    },
+
+    /**
+     * Submit verification info and files
+     * @param {FormData} formData - Verification form data
+     * @returns {Promise<Object>} Response
+     */
+    async submitVerification(formData) {
+        try {
+            const response = await api.post('/users/verify', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error submitting verification:', error);
+            throw error.response?.data || error;
+        }
     }
 };
 

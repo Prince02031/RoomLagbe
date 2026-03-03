@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "INTEGRATION_ANALYSIS.md",
+                "file": "FEATURE_IMPLEMENTATION_STATUS.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "INTEGRATION_ANALYSIS"
+              "title": "FEATURE_IMPLEMENTATION_STATUS"
             }
           }
         ]
@@ -184,5 +184,41 @@
     }
   },
   "active": "062c9ff7a685a7db",
-  "lastOpenFiles": []
+  "lastOpenFiles": [
+    "DATABASE_DOCUMENTATION.md",
+    "RoomLagbe Progress Presentation.pdf",
+    "Copy of Team_HomeSick.pdf",
+    "backend/node_modules/jest-snapshot/node_modules/semver/ranges/simplify.js",
+    "backend/node_modules/jest-snapshot/node_modules/semver/ranges/valid.js",
+    "backend/node_modules/jest-snapshot/node_modules/semver/ranges/to-comparators.js",
+    "backend/node_modules/jest-snapshot/node_modules/semver/ranges/subset.js",
+    "backend/node_modules/jest-snapshot/node_modules/semver/ranges/outside.js",
+    "backend/node_modules/jest-snapshot/node_modules/semver/ranges/min-version.js",
+    "backend/node_modules/jest-snapshot/node_modules/semver/ranges/max-satisfying.js",
+    "backend/node_modules/jest-snapshot/node_modules/semver/ranges/intersects.js",
+    "FEATURE_IMPLEMENTATION_STATUS.md",
+    "IMPLEMENTATION_SUMMARY.md",
+    "INTEGRATION_ANALYSIS.md",
+    "frontend/node_modules/@radix-ui/react-separator/README.md",
+    "frontend/node_modules/@radix-ui/react-progress/README.md",
+    "frontend/node_modules/@radix-ui/react-aspect-ratio/README.md",
+    "frontend/node_modules/react-hook-form/README.md",
+    "frontend/node_modules/@radix-ui/react-navigation-menu/node_modules/@radix-ui/react-context/README.md",
+    "frontend/node_modules/@radix-ui/react-toggle-group/node_modules/@radix-ui/react-context/README.md",
+    "frontend/node_modules/@radix-ui/react-scroll-area/node_modules/@radix-ui/react-context/README.md",
+    "frontend/node_modules/@radix-ui/react-tooltip/node_modules/@radix-ui/react-context/README.md",
+    "frontend/node_modules/@radix-ui/react-accordion/node_modules/@radix-ui/react-slot/README.md",
+    "frontend/node_modules/@radix-ui/react-accordion/node_modules/@radix-ui/react-primitive/README.md",
+    "frontend/node_modules/@radix-ui/react-accordion/node_modules/@radix-ui/react-context/README.md",
+    "frontend/node_modules/@radix-ui/react-accordion/README.md",
+    "frontend/node_modules/@radix-ui/react-alert-dialog/node_modules/@radix-ui/react-slot/README.md",
+    "frontend/node_modules/@radix-ui/react-alert-dialog/node_modules/@radix-ui/react-primitive/README.md",
+    "frontend/node_modules/@radix-ui/react-alert-dialog/node_modules/@radix-ui/react-context/README.md",
+    "frontend/node_modules/@radix-ui/react-alert-dialog/README.md",
+    "frontend/node_modules/@radix-ui/react-checkbox/node_modules/@radix-ui/react-slot/README.md",
+    "frontend/node_modules/@radix-ui/react-checkbox/node_modules/@radix-ui/react-primitive/README.md",
+    "frontend/node_modules/@radix-ui/react-checkbox/node_modules/@radix-ui/react-context/README.md",
+    "frontend/node_modules/@radix-ui/react-checkbox/README.md",
+    "frontend/node_modules/@radix-ui/react-collapsible/node_modules/@radix-ui/react-slot/README.md"
+  ]
 }

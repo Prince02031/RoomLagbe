@@ -1,22 +1,35 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { MapPin, Users, Calendar, Phone, Mail, Heart, Navigation, Star, Loader2 } from 'lucide-react';
+import { MapPin, Users, Calendar, Phone, Mail, Heart, Navigation, Star, Loader2, CheckCircle2 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '../components/ui/carousel';
+import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import listingService from '../services/listing.service';
-import locationService from '../services/location.service';
 import amenityService from '../services/amenity.service';
 import bookingService from '../services/booking.service';
 import { formatCurrency, formatDate, calculateCommute, getFairRentColor, getFairRentLabel } from '../lib/utils';
 import { useApp } from '../context/AppContext';
 import { toast } from 'sonner';
+
+function FitRouteBounds({ coordinates }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!Array.isArray(coordinates) || coordinates.length < 2) {
+      return;
+    }
+
+    map.fitBounds(coordinates, { padding: [20, 20] });
+  }, [coordinates, map]);
+
+  return null;
+}
 
 export default function ListingDetailsPage() {
   const { id } = useParams();
@@ -29,9 +42,13 @@ export default function ListingDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const [selectedUniversity, setSelectedUniversity] = useState('');
+  const [selectedUniversity, setSelectedUniversity] = useState(null);
+  const [universitySearch, setUniversitySearch] = useState('');
+  const [showUniversitySuggestions, setShowUniversitySuggestions] = useState(false);
+  const [searchingUniversities, setSearchingUniversities] = useState(false);
   const [commuteInfo, setCommuteInfo] = useState(null);
   const [universities, setUniversities] = useState([]);
+  const [calculatingCommute, setCalculatingCommute] = useState(false);
 
   const [visitDate, setVisitDate] = useState('');
   const [visitTime, setVisitTime] = useState('');
@@ -48,21 +65,22 @@ export default function ListingDetailsPage() {
         setListing(data);
 
         // Fetch amenities for this listing
-        if (data.apartment_id) {
+        if (data.apartment_id && data.listing_type === 'apartment') {
           try {
             const amenitiesData = await amenityService.getByApartment(data.apartment_id);
             setAmenities(amenitiesData);
           } catch (amenityError) {
             console.error('Error fetching amenities:', amenityError);
           }
+        } else if (data.room_id && data.listing_type === 'room_share') {
+          try {
+            const amenitiesData = await amenityService.getByRoom(data.room_id);
+            setAmenities(amenitiesData);
+          } catch (amenityError) {
+            console.error('Error fetching amenities:', amenityError);
+          }
         }
 
-        // Fetch universities for commute calculator (using mock for now or real if available)
-        // For now let's use the mock data as a fallback
-        setUniversities([
-          { id: '1', name: 'IUT', latitude: 23.9482, longitude: 90.3793 },
-          { id: '2', name: 'RUET', latitude: 24.3636, longitude: 88.6284 },
-        ]);
       } catch (err) {
         console.error('Error fetching listing details:', err);
         setError('Listing not found');
@@ -72,6 +90,61 @@ export default function ListingDetailsPage() {
     };
     fetchListingAndData();
   }, [id]);
+
+  useEffect(() => {
+    const query = universitySearch.trim();
+    if (query.length < 3) {
+      setUniversities([]);
+      setSearchingUniversities(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(async () => {
+      setSearchingUniversities(true);
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(query)}&limit=8`,
+          {
+            signal: controller.signal,
+            headers: {
+              Accept: 'application/json',
+            },
+          }
+        );
+
+        if (!response.ok) {
+          setUniversities([]);
+          return;
+        }
+
+        const data = await response.json();
+        const suggestions = Array.isArray(data)
+          ? data
+            .map((item, index) => ({
+              id: `${index}`,
+              name: item.display_name,
+              latitude: Number.parseFloat(item.lat),
+              longitude: Number.parseFloat(item.lon),
+            }))
+            .filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude))
+          : [];
+
+        setUniversities(suggestions);
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          setUniversities([]);
+        }
+      } finally {
+        setSearchingUniversities(false);
+      }
+    }, 250);
+
+    return () => {
+      controller.abort();
+      clearTimeout(timeoutId);
+    };
+  }, [universitySearch]);
 
   if (loading) {
     return (
@@ -110,6 +183,12 @@ export default function ListingDetailsPage() {
   const womenOnly = listing.women_only !== undefined ? listing.women_only : listing.womenOnly;
   const fairRentScore = listing.fair_rent_score !== undefined ? listing.fair_rent_score : listing.fairRentScore;
   const ownerName = listing.owner_name || listing.ownerName || 'Property Owner';
+  const isPosterVerified = [
+    listing.poster_verification_status,
+    listing.owner_verification_status,
+    listing.student_verification_status,
+    listing.verification_status,
+  ].includes('verified');
   const description = listing.description || listing.apartment_description || '';
   const photos = listing.photos || ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=800&auto=format&fit=crop'];
   const availabilityDate = listing.available_from || listing.availabilityDate || listing.availableFrom;
@@ -131,21 +210,120 @@ export default function ListingDetailsPage() {
     }
   };
 
-  const handleCalculateCommute = () => {
+  const getRouteInfo = async (profile, fromLat, fromLon, toLat, toLon) => {
+    const response = await fetch(
+      `https://router.project-osrm.org/route/v1/${profile}/${fromLon},${fromLat};${toLon},${toLat}?overview=full&geometries=geojson&alternatives=false&steps=false`,
+      {
+        headers: {
+          Accept: 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Route API failed for ${profile}`);
+    }
+
+    const data = await response.json();
+    const route = data?.routes?.[0];
+    if (!route) {
+      throw new Error(`No route data for ${profile}`);
+    }
+
+    return {
+      distanceKm: route.distance / 1000,
+      durationMinutes: Math.round(route.duration / 60),
+      routeCoordinates: Array.isArray(route.geometry?.coordinates)
+        ? route.geometry.coordinates
+          .map((point) => [point[1], point[0]])
+          .filter((point) => Number.isFinite(point[0]) && Number.isFinite(point[1]))
+        : [],
+    };
+  };
+
+  const handleCalculateCommute = async () => {
     if (!selectedUniversity) return;
 
-    const university = universities.find((u) => u.id === selectedUniversity);
     // Use coordinates from location object if available
-    const lat = listing.location?.latitude || listing.latitude;
-    const lng = listing.location?.longitude || listing.longitude;
+    const lat = Number.parseFloat(listing.location?.latitude ?? listing.latitude);
+    const lng = Number.parseFloat(listing.location?.longitude ?? listing.longitude);
 
-    if (university && lat && lng) {
-      const commute = calculateCommute(lat, lng, university.latitude, university.longitude);
-      setCommuteInfo(commute);
-      toast.success('Commute calculated');
-    } else {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
       toast.error('Location coordinates not available for this property');
+      return;
     }
+
+    setCalculatingCommute(true);
+    try {
+      const [walkingRoute, drivingRoute] = await Promise.allSettled([
+        getRouteInfo('walking', lat, lng, selectedUniversity.latitude, selectedUniversity.longitude),
+        getRouteInfo('driving', lat, lng, selectedUniversity.latitude, selectedUniversity.longitude),
+      ]);
+
+      const fallback = calculateCommute(lat, lng, selectedUniversity.latitude, selectedUniversity.longitude);
+      const fallbackDistance = Number.parseFloat(fallback.distance);
+
+      const walkingDistance = walkingRoute.status === 'fulfilled' ? walkingRoute.value.distanceKm : null;
+      const drivingDistance = drivingRoute.status === 'fulfilled' ? drivingRoute.value.distanceKm : null;
+
+      const distance = drivingDistance ?? walkingDistance ?? fallbackDistance;
+      const walkingTime = walkingRoute.status === 'fulfilled' ? walkingRoute.value.durationMinutes : fallback.walkingTime;
+      const drivingTime = drivingRoute.status === 'fulfilled'
+        ? drivingRoute.value.durationMinutes
+        : Math.round((distance / 28) * 60);
+
+      const routeCoordinates = drivingRoute.status === 'fulfilled'
+        ? drivingRoute.value.routeCoordinates
+        : walkingRoute.status === 'fulfilled'
+          ? walkingRoute.value.routeCoordinates
+          : [
+            [lat, lng],
+            [selectedUniversity.latitude, selectedUniversity.longitude],
+          ];
+
+      setCommuteInfo({
+        distance: distance.toFixed(2),
+        walkingTime,
+        drivingTime,
+        routeCoordinates,
+        origin: [lat, lng],
+        destination: [selectedUniversity.latitude, selectedUniversity.longitude],
+      });
+
+      if (walkingRoute.status === 'rejected' && drivingRoute.status === 'rejected') {
+        toast.info('Showing estimated commute (route API unavailable)');
+      } else {
+        toast.success('Commute calculated');
+      }
+    } catch {
+      const fallback = calculateCommute(lat, lng, selectedUniversity.latitude, selectedUniversity.longitude);
+      setCommuteInfo({
+        distance: fallback.distance,
+        walkingTime: fallback.walkingTime,
+        drivingTime: Math.round((Number.parseFloat(fallback.distance) / 28) * 60),
+        routeCoordinates: [
+          [lat, lng],
+          [selectedUniversity.latitude, selectedUniversity.longitude],
+        ],
+        origin: [lat, lng],
+        destination: [selectedUniversity.latitude, selectedUniversity.longitude],
+      });
+      toast.info('Showing estimated commute');
+    } finally {
+      setCalculatingCommute(false);
+    }
+  };
+
+  const handleViewRentAnalytics = () => {
+    const lat = Number.parseFloat(listing?.location?.latitude ?? listing?.latitude);
+    const lng = Number.parseFloat(listing?.location?.longitude ?? listing?.longitude);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      toast.error('Location coordinates not available for analytics');
+      return;
+    }
+
+    navigate(`/analytics?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}&listingId=${encodeURIComponent(listingId)}`);
   };
 
   const handleBookVisit = async () => {
@@ -330,7 +508,7 @@ export default function ListingDetailsPage() {
                 </div>
 
                 {/* Amenities */}
-                {isApartment && amenities.length > 0 && (
+                {amenities.length > 0 && (
                   <div className="pt-4 border-t">
                     <h3 className="font-semibold mb-2">Amenities</h3>
                     <div className="flex flex-wrap gap-2">
@@ -355,7 +533,10 @@ export default function ListingDetailsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <p className="font-semibold text-lg">{ownerName}</p>
+                  <p className="font-semibold text-lg flex items-center gap-1.5">
+                    <span>{ownerName}</span>
+                    {isPosterVerified && <CheckCircle2 className="h-4 w-4 text-blue-600" aria-label="Verified" />}
+                  </p>
                   <div className="flex items-center space-x-2 text-sm text-gray-600 mt-2">
                     <Phone className="h-4 w-4" />
                     <span>{listing.owner_phone || '+880 1xxx-xxxxxx'}</span>
@@ -427,33 +608,95 @@ export default function ListingDetailsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label>Select University</Label>
-                  <Select value={selectedUniversity} onValueChange={setSelectedUniversity}>
-                    <SelectTrigger className="mt-2">
-                      <SelectValue placeholder="Choose university" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {universities.map((uni) => (
-                        <SelectItem key={uni.id} value={uni.id}>
-                          {uni.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Search University / Destination</Label>
+                  <div className="relative mt-2">
+                    <Input
+                      value={universitySearch}
+                      onChange={(e) => {
+                        setUniversitySearch(e.target.value);
+                        setShowUniversitySuggestions(true);
+                        setSelectedUniversity(null);
+                      }}
+                      onFocus={() => setShowUniversitySuggestions(true)}
+                      placeholder="Search places via OpenStreetMap (min 3 chars)"
+                    />
+
+                    {showUniversitySuggestions && universitySearch.trim() && (
+                      <div className="absolute z-30 mt-1 w-full rounded-md border bg-white shadow-sm max-h-52 overflow-y-auto">
+                        {searchingUniversities ? (
+                          <div className="px-3 py-2 text-sm text-gray-500">Searching OpenStreetMap...</div>
+                        ) : universities.length > 0 ? (
+                          universities.map((uni) => (
+                            <button
+                              key={uni.id}
+                              type="button"
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                              onClick={() => {
+                                setSelectedUniversity(uni);
+                                setUniversitySearch(uni.name);
+                                setShowUniversitySuggestions(false);
+                              }}
+                            >
+                              {uni.name}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-3 py-2 text-sm text-gray-500">No matching places found</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <Button onClick={handleCalculateCommute} className="w-full" disabled={!selectedUniversity}>
-                  Calculate Commute
-                </Button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Button onClick={handleCalculateCommute} className="w-full" disabled={!selectedUniversity || calculatingCommute}>
+                    {calculatingCommute ? 'Calculating...' : 'Calculate Commute'}
+                  </Button>
+                  <Button type="button" variant="outline" className="w-full" onClick={handleViewRentAnalytics}>
+                    View Rent Analytics
+                  </Button>
+                </div>
 
                 {commuteInfo && (
-                  <div className="bg-blue-50 p-4 rounded-lg space-y-2 border border-blue-100">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 text-sm">Distance:</span>
-                      <span className="font-semibold">{commuteInfo.distance} km</span>
+                  <div className="space-y-3">
+                    <div className="bg-blue-50 p-4 rounded-lg space-y-2 border border-blue-100">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 text-sm">Distance:</span>
+                        <span className="font-semibold">{commuteInfo.distance} km</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 text-sm">Walking Time:</span>
+                        <span className="font-semibold">{commuteInfo.walkingTime} mins</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 text-sm">Driving Time:</span>
+                        <span className="font-semibold">{commuteInfo.drivingTime} mins</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 text-sm">Walking Time:</span>
-                      <span className="font-semibold">{commuteInfo.walkingTime} mins</span>
+
+                    <div className="h-44 rounded-lg overflow-hidden border border-gray-200">
+                      <MapContainer
+                        center={commuteInfo.origin || [23.8103, 90.4125]}
+                        zoom={13}
+                        scrollWheelZoom={false}
+                        style={{ height: '100%', width: '100%' }}
+                      >
+                        <TileLayer
+                          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+                        {Array.isArray(commuteInfo.routeCoordinates) && commuteInfo.routeCoordinates.length > 1 && (
+                          <>
+                            <Polyline positions={commuteInfo.routeCoordinates} pathOptions={{ color: '#2563eb', weight: 4 }} />
+                            <FitRouteBounds coordinates={commuteInfo.routeCoordinates} />
+                          </>
+                        )}
+                        {Array.isArray(commuteInfo.origin) && (
+                          <CircleMarker center={commuteInfo.origin} radius={5} pathOptions={{ color: '#16a34a', fillColor: '#16a34a', fillOpacity: 1 }} />
+                        )}
+                        {Array.isArray(commuteInfo.destination) && (
+                          <CircleMarker center={commuteInfo.destination} radius={5} pathOptions={{ color: '#dc2626', fillColor: '#dc2626', fillOpacity: 1 }} />
+                        )}
+                      </MapContainer>
                     </div>
                   </div>
                 )}
