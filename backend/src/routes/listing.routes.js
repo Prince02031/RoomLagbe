@@ -17,6 +17,8 @@ router.get('/:id', ListingController.getById);
 // Other protected routes
 router.post('/', authenticate, ListingController.create);
 router.put('/:id', authenticate, ListingController.update);
+router.delete('/:id', authenticate, ListingController.delete);
+router.patch('/:id/close', authenticate, ListingController.close);
 router.post('/photos', authenticate, uploadListingPhoto.any(), ListingController.addPhotos);
 
 export default router;

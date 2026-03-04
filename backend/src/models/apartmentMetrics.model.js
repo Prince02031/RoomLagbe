@@ -30,5 +30,35 @@ export const ApartmentMetricsModel = {
       [apartmentId]
     );
     return rows[0];
-  }
+  },
+
+  incrementViewCount: async (apartmentId) => {
+    await pool.query(
+      `INSERT INTO apartment_metrics (apartment_id, view_count)
+       VALUES ($1, 1)
+       ON CONFLICT (apartment_id)
+       DO UPDATE SET view_count = apartment_metrics.view_count + 1, last_calculated = now()`,
+      [apartmentId]
+    );
+  },
+
+  syncWishlistCount: async (apartmentId) => {
+    await pool.query(
+      `INSERT INTO apartment_metrics (apartment_id, wishlist_count)
+       VALUES ($1, (
+         SELECT COUNT(*) FROM wishlist w
+         JOIN listing l ON w.listing_id = l.listing_id
+         WHERE l.apartment_id = $1
+       ))
+       ON CONFLICT (apartment_id)
+       DO UPDATE SET
+         wishlist_count = (
+           SELECT COUNT(*) FROM wishlist w
+           JOIN listing l ON w.listing_id = l.listing_id
+           WHERE l.apartment_id = $1
+         ),
+         last_calculated = now()`,
+      [apartmentId]
+    );
+  },
 };

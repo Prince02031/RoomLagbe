@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, Users, Heart, Check, X } from 'lucide-react';
+import { Home, Plus, Users, Heart, Check, X, Clock, CheckCircle, Eye, Trash2, CheckSquare } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
@@ -20,6 +20,39 @@ export default function StudentDashboard() {
   const [receivedBookings, setReceivedBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [bookingsLoading, setBookingsLoading] = useState(true);
+  const [deletingListingId, setDeletingListingId] = useState(null);
+  const [cancellingBookingId, setCancellingBookingId] = useState(null);
+  const [closingListingId, setClosingListingId] = useState(null);
+
+  const handleDeleteListing = async (listingId) => {
+    if (!window.confirm('Remove this listing? It will be marked as deleted and hidden from search.')) return;
+    setDeletingListingId(listingId);
+    try {
+      await listingService.deleteListing(listingId);
+      setListings(prev => prev.filter(l => l.listing_id !== listingId));
+      toast.success('Listing removed');
+    } catch (error) {
+      toast.error(error.message || 'Failed to remove listing');
+    } finally {
+      setDeletingListingId(null);
+    }
+  };
+
+  const handleCancelBooking = async (bookingId) => {
+    if (!window.confirm('Cancel this visit request?')) return;
+    setCancellingBookingId(bookingId);
+    try {
+      await bookingService.updateStatus(bookingId, 'cancelled');
+      setBookings(prev => prev.map(b =>
+        b.booking_id === bookingId ? { ...b, status: 'cancelled' } : b
+      ));
+      toast.success('Visit request cancelled');
+    } catch (error) {
+      toast.error(error.message || 'Failed to cancel request');
+    } finally {
+      setCancellingBookingId(null);
+    }
+  };
 
   useEffect(() => {
     const fetchMyListings = async () => {
@@ -56,6 +89,29 @@ export default function StudentDashboard() {
 
   const initialTab = 'listings';
 
+  const pendingBookings = bookings.filter(b => b.status === 'pending');
+  const approvedBookings = bookings.filter(b => b.status === 'approved');
+  const rejectedBookings = bookings.filter(b => b.status === 'rejected');
+
+  const closedListings = listings.filter(l => l.availability_status === 'closed');
+  const activeListings = listings.filter(l => !['closed'].includes(l.availability_status));
+
+  const handleCloseListing = async (listingId) => {
+    if (!window.confirm('Mark this room share as closed? This means you found a roommate. The listing will be hidden from search.')) return;
+    setClosingListingId(listingId);
+    try {
+      await listingService.closeListing(listingId);
+      setListings(prev => prev.map(l =>
+        l.listing_id === listingId ? { ...l, availability_status: 'closed' } : l
+      ));
+      toast.success('Room share closed — congratulations on finding a roommate!');
+    } catch (error) {
+      toast.error(error.message || 'Failed to close listing');
+    } finally {
+      setClosingListingId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-20">
@@ -74,13 +130,13 @@ export default function StudentDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">My Listings</p>
-                <p className="text-2xl font-semibold mt-1">{listings.length}</p>
+                <p className="text-2xl font-semibold mt-1">{activeListings.length}</p>
               </div>
               <Home className="h-10 w-10 text-blue-600" />
             </div>
@@ -91,10 +147,46 @@ export default function StudentDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">My Bookings</p>
+                <p className="text-sm text-gray-600">Closed / Rented</p>
+                <p className="text-2xl font-semibold mt-1 text-green-600">{closedListings.length}</p>
+              </div>
+              <CheckSquare className="h-10 w-10 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Requests</p>
                 <p className="text-2xl font-semibold mt-1">{bookings.length}</p>
               </div>
-              <Users className="h-10 w-10 text-green-600" />
+              <Users className="h-10 w-10 text-gray-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Pending</p>
+                <p className="text-2xl font-semibold mt-1 text-yellow-600">{pendingBookings.length}</p>
+              </div>
+              <Clock className="h-10 w-10 text-yellow-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Approved</p>
+                <p className="text-2xl font-semibold mt-1 text-green-600">{approvedBookings.length}</p>
+              </div>
+              <CheckCircle className="h-10 w-10 text-green-500" />
             </div>
           </CardContent>
         </Card>
@@ -155,16 +247,52 @@ export default function StudentDashboard() {
                           <p className="text-2xl font-semibold text-gray-900 mt-2">{formatCurrency(item.price_per_person)}/person</p>
                           <p className="text-sm text-gray-500 mt-1">Available from {formatDate(item.created_at)}</p>
                           <div className="flex space-x-2 mt-2">
-                            <Badge variant={item.availability_status === 'available' ? 'default' : 'secondary'}>
-                              {item.availability_status}
+                          <Badge variant={item.availability_status === 'available' ? 'default' : item.availability_status === 'closed' ? 'outline' : 'secondary'}
+                            className={item.availability_status === 'closed' ? 'text-green-700 border-green-300 bg-green-50' : ''}>
+                            {item.availability_status === 'closed' ? '✓ Closed' : item.availability_status}
                             </Badge>
                             {item.women_only && <Badge>Women Only</Badge>}
                           </div>
+                          <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                            <span className="flex items-center gap-1">
+                              <Eye className="h-4 w-4" /> {item.view_count ?? 0} views
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Heart className="h-4 w-4" /> {item.wishlist_count ?? 0} wishlisted
+                            </span>
+                          </div>
                         </div>
                       </div>
-                      <Button onClick={() => navigate(`/listing/${item.listing_id}`)}>
-                        View Details
-                      </Button>
+                      <div className="flex flex-col gap-2">
+                        <Button onClick={() => navigate(`/listing/${item.listing_id}`)}
+                          size="sm">
+                          View Details
+                        </Button>
+                        {item.availability_status !== 'closed' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-green-700 border-green-300 hover:bg-green-50"
+                            disabled={closingListingId === item.listing_id}
+                            onClick={() => handleCloseListing(item.listing_id)}
+                          >
+                            {closingListingId === item.listing_id
+                              ? <Loader2 className="h-4 w-4 animate-spin" />
+                              : <><CheckSquare className="h-4 w-4 mr-1" /> Mark Closed</>}
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-red-600 border-red-200 hover:bg-red-50"
+                          disabled={deletingListingId === item.listing_id}
+                          onClick={() => handleDeleteListing(item.listing_id)}
+                        >
+                          {deletingListingId === item.listing_id
+                            ? <Loader2 className="h-4 w-4 animate-spin" />
+                            : <><Trash2 className="h-4 w-4 mr-1" /> Remove</>}
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -205,7 +333,7 @@ export default function StudentDashboard() {
                           <Badge 
                             variant={
                               booking.status === 'approved' ? 'default' : 
-                              booking.status === 'rejected' ? 'destructive' : 
+                              booking.status === 'rejected' || booking.status === 'cancelled' ? 'destructive' : 
                               'secondary'
                             }
                             className="ml-4"
@@ -232,13 +360,28 @@ export default function StudentDashboard() {
                           </p>
                         </div>
                       </div>
-                      <Button 
-                        onClick={() => navigate(`/listing/${booking.listing_id}`)}
-                        variant="outline"
-                        className="ml-4"
-                      >
-                        View Listing
-                      </Button>
+                      <div className="flex flex-col gap-2 ml-4">
+                        <Button
+                          onClick={() => navigate(`/listing/${booking.listing_id}`)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          View Listing
+                        </Button>
+                        {booking.status === 'pending' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600 border-red-200 hover:bg-red-50"
+                            disabled={cancellingBookingId === booking.booking_id}
+                            onClick={() => handleCancelBooking(booking.booking_id)}
+                          >
+                            {cancellingBookingId === booking.booking_id
+                              ? <Loader2 className="h-4 w-4 animate-spin" />
+                              : <><X className="h-4 w-4 mr-1" /> Cancel</>}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

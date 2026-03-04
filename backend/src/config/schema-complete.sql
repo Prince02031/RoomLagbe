@@ -22,8 +22,11 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
-  CREATE TYPE listing_status AS ENUM ('available', 'unavailable', 'booked', 'filled');
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  CREATE TYPE listing_status AS ENUM ('available', 'unavailable', 'booked', 'filled', 'deleted', 'closed');
+EXCEPTION WHEN duplicate_object THEN
+  ALTER TYPE listing_status ADD VALUE IF NOT EXISTS 'deleted';
+  ALTER TYPE listing_status ADD VALUE IF NOT EXISTS 'closed';
+END $$;
 
 DO $$ BEGIN
   CREATE TYPE booking_status AS ENUM ('pending', 'approved', 'rejected', 'cancelled');
@@ -315,7 +318,23 @@ CREATE TABLE IF NOT EXISTS apartment_metrics (
   CONSTRAINT chk_fair_rent_score CHECK (fair_rent_score IS NULL OR (fair_rent_score >= 0 AND fair_rent_score <= 100))
 );
 
--- ============= 9) INDEXES =============
+-- ============= 9) NOTIFICATION =============
+
+CREATE TABLE IF NOT EXISTS notification (
+  notification_id  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id          UUID NOT NULL REFERENCES "user"(user_id) ON DELETE CASCADE,
+  type             VARCHAR(100) NOT NULL,
+  title            VARCHAR(255) NOT NULL,
+  message          TEXT NOT NULL,
+  meta             JSONB DEFAULT '{}',
+  is_read          BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notification_user ON notification(user_id);
+CREATE INDEX IF NOT EXISTS idx_notification_unread ON notification(user_id) WHERE is_read = FALSE;
+
+-- ============= 10) INDEXES =============
 
 -- User lookups
 CREATE INDEX IF NOT EXISTS idx_user_username ON "user"(username);

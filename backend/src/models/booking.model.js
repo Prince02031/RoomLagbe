@@ -91,21 +91,21 @@ export const BookingModel = {
 
   // Check for time conflicts with approved visits (2-hour window)
   checkTimeConflict: async (listingId, visitTime, excludeBookingId = null) => {
-    // Check if the new visit time falls within 2 hours after any existing approved visit
+    // Check if the new visit time falls within 2 hours after any existing approved or pending visit
     const query = `
       SELECT b.*, 
              u.name as student_name, u.email as student_email
       FROM booking b
       JOIN "user" u ON b.std_id = u.user_id
       WHERE b.listing_id = $1 
-      AND b.status = 'approved' 
+      AND b.status IN ('approved', 'pending') 
       AND b.visit_time IS NOT NULL
       ${excludeBookingId ? 'AND b.booking_id != $3' : ''}
       AND (
-        -- New visit time is within 2 hours after an existing approved visit
+        -- New visit time is within 2 hours after an existing visit
         ($2 >= b.visit_time AND $2 < (b.visit_time + INTERVAL '2 hours'))
         OR
-        -- New visit time would block an existing approved visit (new visit + 2 hours overlaps)
+        -- New visit time would block an existing visit (new visit + 2 hours overlaps)
         (b.visit_time >= $2 AND b.visit_time < ($2::timestamptz + INTERVAL '2 hours'))
       )
       LIMIT 1;

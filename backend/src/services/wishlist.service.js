@@ -1,5 +1,6 @@
 import { WishlistModel } from '../models/wishlist.model.js';
 import { ListingModel } from '../models/listing.model.js';
+import { ApartmentMetricsModel } from '../models/apartmentMetrics.model.js';
 
 export const WishlistService = {
   /**
@@ -14,8 +15,15 @@ export const WishlistService = {
     if (!listing) {
       throw new Error('Listing not found.');
     }
-    // The model handles duplicate entries gracefully with ON CONFLICT.
-    return await WishlistModel.add(userId, listingId);
+    const item = await WishlistModel.add(userId, listingId);
+
+    // Sync wishlist count non-blocking
+    if (listing.apartment_id) {
+      ApartmentMetricsModel.syncWishlistCount(listing.apartment_id)
+        .catch(err => console.warn('Wishlist count sync failed:', err.message));
+    }
+
+    return item;
   },
 
   /**
@@ -24,7 +32,14 @@ export const WishlistService = {
    * @param {number} listingId - The ID of the listing to remove.
    */
   removeFromWishlist: async (userId, listingId) => {
-    return await WishlistModel.remove(userId, listingId);
+    const listing = await ListingModel.findById(listingId).catch(() => null);
+    await WishlistModel.remove(userId, listingId);
+
+    // Sync wishlist count non-blocking
+    if (listing?.apartment_id) {
+      ApartmentMetricsModel.syncWishlistCount(listing.apartment_id)
+        .catch(err => console.warn('Wishlist count sync failed:', err.message));
+    }
   },
 
   /**

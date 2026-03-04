@@ -31,6 +31,7 @@ export const ListingModel = {
       LEFT JOIN "user" u_owner ON (a.owner_id = u_owner.user_id)
       LEFT JOIN "user" u_student ON (r.std_id = u_student.user_id)
       WHERE 1=1
+      AND l.availability_status::text NOT IN ('deleted', 'closed')
     `;
     const values = [];
     let paramCount = 1;
@@ -149,6 +150,22 @@ export const ListingModel = {
     return result.rows[0];
   },
 
+  softDelete: async (id) => {
+    const result = await pool.query(
+      `UPDATE listing SET availability_status = 'deleted'::listing_status WHERE listing_id = $1 RETURNING *`,
+      [id]
+    );
+    return result.rows[0];
+  },
+
+  closeListing: async (id) => {
+    const result = await pool.query(
+      `UPDATE listing SET availability_status = 'closed'::listing_status WHERE listing_id = $1 RETURNING *`,
+      [id]
+    );
+    return result.rows[0];
+  },
+
   findPending: async () => {
     const query = `
       SELECT l.*, 
@@ -178,14 +195,18 @@ export const ListingModel = {
       SELECT l.*, 
              COALESCE(a.title, ra.title) as apartment_title, 
              r.room_name,
-             COALESCE(loc.area_name, rloc.area_name) as location
+             COALESCE(loc.area_name, rloc.area_name) as location,
+             am.view_count,
+             am.wishlist_count
       FROM listing l
       LEFT JOIN apartment a ON l.apartment_id = a.apartment_id
       LEFT JOIN room r ON l.room_id = r.room_id
       LEFT JOIN apartment ra ON r.apartment_id = ra.apartment_id
       LEFT JOIN location loc ON a.location_id = loc.location_id
       LEFT JOIN location rloc ON ra.location_id = rloc.location_id
-      WHERE a.owner_id = $1 OR ra.owner_id = $1 OR r.std_id = $1
+      LEFT JOIN apartment_metrics am ON COALESCE(a.apartment_id, ra.apartment_id) = am.apartment_id
+      WHERE (a.owner_id = $1 OR ra.owner_id = $1 OR r.std_id = $1)
+      AND l.availability_status::text != 'deleted'
       ORDER BY l.created_at DESC
     `;
     const result = await pool.query(query, [userId]);

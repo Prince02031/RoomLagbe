@@ -4,6 +4,7 @@ import { ApartmentModel } from '../models/apartment.model.js';
 import { RoomModel } from '../models/room.model.js';
 import { AmenityModel } from '../models/amenity.model.js';
 import { ListingPhotoModel } from '../models/listingPhoto.model.js';
+import { ApartmentMetricsModel } from '../models/apartmentMetrics.model.js';
 import supabase from '../config/supabase.js';
 import { config } from '../config/env.js';
 
@@ -27,6 +28,13 @@ export const ListingController = {
       if (!listing) {
         return res.status(404).json({ message: 'Listing not found' });
       }
+
+      // Non-blocking view count increment
+      if (listing.apartment_id) {
+        ApartmentMetricsModel.incrementViewCount(listing.apartment_id)
+          .catch(err => console.warn('View count increment failed:', err.message));
+      }
+
       const photos = await ListingPhotoModel.getByListing(id);
       const photoUrls = photos.map((photo) => photo.photo_url).filter(Boolean);
       const thumbnail = photos.find((photo) => photo.is_thumbnail)?.photo_url || photoUrls[0] || null;
@@ -133,6 +141,41 @@ export const ListingController = {
       res.json(listings);
     } catch (error) {
       res.status(500).json({ message: 'Error fetching your listings', error: error.message });
+    }
+  },
+
+  delete: async (req, res) => {
+    try {
+      const listing = await ListingModel.findWithOwner(req.params.id);
+      if (!listing) {
+        return res.status(404).json({ message: 'Listing not found' });
+      }
+      if (listing.owner_id !== req.user.id) {
+        return res.status(403).json({ message: 'Not authorized to delete this listing' });
+      }
+      await ListingModel.softDelete(req.params.id);
+      res.json({ message: 'Listing deleted successfully' });
+    } catch (error) {
+      res.status(500).json({ message: 'Error deleting listing', error: error.message });
+    }
+  },
+
+  close: async (req, res) => {
+    try {
+      const listing = await ListingModel.findWithOwner(req.params.id);
+      if (!listing) {
+        return res.status(404).json({ message: 'Listing not found' });
+      }
+      if (listing.owner_id !== req.user.id) {
+        return res.status(403).json({ message: 'Not authorized to close this listing' });
+      }
+      if (listing.availability_status === 'closed') {
+        return res.status(400).json({ message: 'Listing is already closed' });
+      }
+      await ListingModel.closeListing(req.params.id);
+      res.json({ message: 'Listing marked as closed — tenant found!' });
+    } catch (error) {
+      res.status(500).json({ message: 'Error closing listing', error: error.message });
     }
   },
 

@@ -16,6 +16,7 @@ import ProfilePage from './pages/ProfilePage';
 import ProfileVerificationPage from './pages/ProfileVerificationPage';
 import AdminVerificationsPage from './pages/admin/AdminVerificationsPage';
 import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
   return (
@@ -103,8 +104,8 @@ export default function App() {
               }
             />
 
-            {/* Catch-all redirect */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* 404 */}
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
           <Toaster />
         </div>

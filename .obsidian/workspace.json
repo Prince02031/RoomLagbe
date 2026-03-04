@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "FEATURE_IMPLEMENTATION_STATUS.md",
+                "file": "INTEGRATION_ANALYSIS.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "FEATURE_IMPLEMENTATION_STATUS"
+              "title": "INTEGRATION_ANALYSIS"
             }
           }
         ]
@@ -185,7 +185,12 @@
   },
   "active": "062c9ff7a685a7db",
   "lastOpenFiles": [
+    "frontend/src/app/pages/NotFoundPage.jsx",
+    "IMPLEMENTATION_SUMMARY.md",
+    "INTEGRATION_ANALYSIS.md",
+    "FEATURE_IMPLEMENTATION_STATUS.md",
     "DATABASE_DOCUMENTATION.md",
+    "BOOKING_FEATURE_DOCUMENTATION.md",
     "RoomLagbe Progress Presentation.pdf",
     "Copy of Team_HomeSick.pdf",
     "backend/node_modules/jest-snapshot/node_modules/semver/ranges/simplify.js",
@@ -196,9 +201,6 @@
     "backend/node_modules/jest-snapshot/node_modules/semver/ranges/min-version.js",
     "backend/node_modules/jest-snapshot/node_modules/semver/ranges/max-satisfying.js",
     "backend/node_modules/jest-snapshot/node_modules/semver/ranges/intersects.js",
-    "FEATURE_IMPLEMENTATION_STATUS.md",
-    "IMPLEMENTATION_SUMMARY.md",
-    "INTEGRATION_ANALYSIS.md",
     "frontend/node_modules/@radix-ui/react-separator/README.md",
     "frontend/node_modules/@radix-ui/react-progress/README.md",
     "frontend/node_modules/@radix-ui/react-aspect-ratio/README.md",
@@ -218,7 +220,6 @@
     "frontend/node_modules/@radix-ui/react-checkbox/node_modules/@radix-ui/react-slot/README.md",
     "frontend/node_modules/@radix-ui/react-checkbox/node_modules/@radix-ui/react-primitive/README.md",
     "frontend/node_modules/@radix-ui/react-checkbox/node_modules/@radix-ui/react-context/README.md",
-    "frontend/node_modules/@radix-ui/react-checkbox/README.md",
-    "frontend/node_modules/@radix-ui/react-collapsible/node_modules/@radix-ui/react-slot/README.md"
+    "frontend/node_modules/@radix-ui/react-checkbox/README.md"
   ]
 }
