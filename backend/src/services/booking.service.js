@@ -50,7 +50,7 @@ export const BookingService = {
 
   updateBookingStatus: async (bookingId, status, userId) => {
     // 1. Validate status
-    const allowedStatuses = [BOOKING_STATUS.APPROVED, BOOKING_STATUS.REJECTED];
+    const allowedStatuses = [BOOKING_STATUS.APPROVED, BOOKING_STATUS.REJECTED, BOOKING_STATUS.CANCELLED];
     if (!allowedStatuses.includes(status)) {
       throw new Error('Invalid status update.');
     }
@@ -61,13 +61,24 @@ export const BookingService = {
       throw new Error('Booking not found.');
     }
 
-    // 3. Get the listing to verify the owner
+    // 3. Allow students to cancel their own pending bookings
+    if (status === BOOKING_STATUS.CANCELLED) {
+      if (booking.std_id !== userId) {
+        throw new Error('You can only cancel your own bookings.');
+      }
+      if (booking.status !== BOOKING_STATUS.PENDING) {
+        throw new Error('Only pending bookings can be cancelled.');
+      }
+      return await BookingModel.updateStatus(bookingId, status);
+    }
+
+    // 4. Get the listing to verify the owner
     const listing = await ListingModel.findById(booking.listing_id);
     if (!listing) {
       throw new Error('Associated listing not found.');
     }
 
-    // 4. Authorize the user - check if user is the creator/owner of the listing
+    // 5. Authorize the user - check if user is the creator/owner of the listing
     if (listing.creator_id !== userId) {
       throw new Error('You are not authorized to update this booking.');
     }

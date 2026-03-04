@@ -125,6 +125,24 @@ const listingService = {
             throw error.response?.data || error;
         }
     },
+
+    async deleteListing(id) {
+        try {
+            const response = await api.delete(`/listings/${id}`);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error;
+        }
+    },
+
+    async closeListing(id) {
+        try {
+            const response = await api.patch(`/listings/${id}/close`);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error;
+        }
+    },
 };
 
 export default listingService;

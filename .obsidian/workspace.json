@@ -185,6 +185,7 @@
   },
   "active": "062c9ff7a685a7db",
   "lastOpenFiles": [
+    "frontend/src/app/pages/NotFoundPage.jsx",
     "IMPLEMENTATION_SUMMARY.md",
     "INTEGRATION_ANALYSIS.md",
     "FEATURE_IMPLEMENTATION_STATUS.md",
@@ -219,7 +220,6 @@
     "frontend/node_modules/@radix-ui/react-checkbox/node_modules/@radix-ui/react-slot/README.md",
     "frontend/node_modules/@radix-ui/react-checkbox/node_modules/@radix-ui/react-primitive/README.md",
     "frontend/node_modules/@radix-ui/react-checkbox/node_modules/@radix-ui/react-context/README.md",
-    "frontend/node_modules/@radix-ui/react-checkbox/README.md",
-    "frontend/node_modules/@radix-ui/react-collapsible/node_modules/@radix-ui/react-slot/README.md"
+    "frontend/node_modules/@radix-ui/react-checkbox/README.md"
   ]
 }

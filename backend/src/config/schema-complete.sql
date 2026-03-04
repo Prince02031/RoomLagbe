@@ -22,8 +22,11 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
-  CREATE TYPE listing_status AS ENUM ('available', 'unavailable', 'booked', 'filled');
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  CREATE TYPE listing_status AS ENUM ('available', 'unavailable', 'booked', 'filled', 'deleted', 'closed');
+EXCEPTION WHEN duplicate_object THEN
+  ALTER TYPE listing_status ADD VALUE IF NOT EXISTS 'deleted';
+  ALTER TYPE listing_status ADD VALUE IF NOT EXISTS 'closed';
+END $$;
 
 DO $$ BEGIN
   CREATE TYPE booking_status AS ENUM ('pending', 'approved', 'rejected', 'cancelled');

@@ -144,6 +144,41 @@ export const ListingController = {
     }
   },
 
+  delete: async (req, res) => {
+    try {
+      const listing = await ListingModel.findWithOwner(req.params.id);
+      if (!listing) {
+        return res.status(404).json({ message: 'Listing not found' });
+      }
+      if (listing.owner_id !== req.user.id) {
+        return res.status(403).json({ message: 'Not authorized to delete this listing' });
+      }
+      await ListingModel.softDelete(req.params.id);
+      res.json({ message: 'Listing deleted successfully' });
+    } catch (error) {
+      res.status(500).json({ message: 'Error deleting listing', error: error.message });
+    }
+  },
+
+  close: async (req, res) => {
+    try {
+      const listing = await ListingModel.findWithOwner(req.params.id);
+      if (!listing) {
+        return res.status(404).json({ message: 'Listing not found' });
+      }
+      if (listing.owner_id !== req.user.id) {
+        return res.status(403).json({ message: 'Not authorized to close this listing' });
+      }
+      if (listing.availability_status === 'closed') {
+        return res.status(400).json({ message: 'Listing is already closed' });
+      }
+      await ListingModel.closeListing(req.params.id);
+      res.json({ message: 'Listing marked as closed — tenant found!' });
+    } catch (error) {
+      res.status(500).json({ message: 'Error closing listing', error: error.message });
+    }
+  },
+
   addPhotos: async (req, res) => {
     try {
       const listingId = req.body?.listingId || req.query?.listingId;

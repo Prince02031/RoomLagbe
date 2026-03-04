@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, Users, Eye, Check, X, Heart, CheckCircle, BarChart2, TrendingUp, ChevronDown } from 'lucide-react';
+import { Home, Plus, Users, Eye, Check, X, Heart, CheckCircle, BarChart2, TrendingUp, ChevronDown, Trash2, CheckSquare } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
@@ -21,6 +21,38 @@ export default function OwnerDashboard() {
   const [loading, setLoading] = useState(true);
   const [bookingsLoading, setBookingsLoading] = useState(true);
   const [selectedListingId, setSelectedListingId] = useState(null);
+  const [deletingListingId, setDeletingListingId] = useState(null);
+  const [closingListingId, setClosingListingId] = useState(null);
+
+  const handleDeleteListing = async (listingId) => {
+    if (!window.confirm('Remove this listing? It will be marked as deleted and hidden from search.')) return;
+    setDeletingListingId(listingId);
+    try {
+      await listingService.deleteListing(listingId);
+      setListings(prev => prev.filter(l => l.listing_id !== listingId));
+      toast.success('Listing removed');
+    } catch (error) {
+      toast.error(error.message || 'Failed to remove listing');
+    } finally {
+      setDeletingListingId(null);
+    }
+  };
+
+  const handleCloseListing = async (listingId) => {
+    if (!window.confirm('Mark this listing as closed? This means you found a tenant. The listing will be hidden from search.')) return;
+    setClosingListingId(listingId);
+    try {
+      await listingService.closeListing(listingId);
+      setListings(prev => prev.map(l =>
+        l.listing_id === listingId ? { ...l, availability_status: 'closed' } : l
+      ));
+      toast.success('Listing closed — congratulations on finding a tenant!');
+    } catch (error) {
+      toast.error(error.message || 'Failed to close listing');
+    } finally {
+      setClosingListingId(null);
+    }
+  };
 
   useEffect(() => {
     const fetchMyListings = async () => {
@@ -72,6 +104,9 @@ export default function OwnerDashboard() {
     ? Math.round((approvedBookings.length / bookings.length) * 100)
     : 0;
 
+  const closedListings = listings.filter(l => l.availability_status === 'closed');
+  const activeListings = listings.filter(l => !['closed'].includes(l.availability_status));
+
   // Per-listing request breakdown
   const listingRequestStats = listings.map(listing => {
     const listingBookings = bookings.filter(b => b.listing_id === listing.listing_id);
@@ -111,9 +146,21 @@ export default function OwnerDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">My Listings</p>
-                <p className="text-2xl font-semibold mt-1">{listings.length}</p>
+                <p className="text-2xl font-semibold mt-1">{activeListings.length}</p>
               </div>
               <Home className="h-10 w-10 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Closed / Rented</p>
+                <p className="text-2xl font-semibold mt-1 text-green-600">{closedListings.length}</p>
+              </div>
+              <CheckSquare className="h-10 w-10 text-green-500" />
             </div>
           </CardContent>
         </Card>
@@ -210,8 +257,9 @@ export default function OwnerDashboard() {
                           <p className="text-2xl font-semibold text-gray-900 mt-2">{formatCurrency(item.price_per_person)}/person</p>
                           <p className="text-sm text-gray-500 mt-1">Available from {formatDate(item.created_at)}</p>
                           <div className="flex space-x-2 mt-2">
-                            <Badge variant={item.availability_status === 'available' ? 'default' : 'secondary'}>
-                              {item.availability_status}
+                            <Badge variant={item.availability_status === 'available' ? 'default' : item.availability_status === 'closed' ? 'outline' : 'secondary'}
+                              className={item.availability_status === 'closed' ? 'text-green-700 border-green-300 bg-green-50' : ''}>
+                              {item.availability_status === 'closed' ? '✓ Closed' : item.availability_status}
                             </Badge>
                             {item.women_only && <Badge>Women Only</Badge>}
                             <Badge variant="outline">{item.listing_type}</Badge>
@@ -226,9 +274,36 @@ export default function OwnerDashboard() {
                           </div>
                         </div>
                       </div>
-                      <Button onClick={() => navigate(`/listing/${item.listing_id}`)}>
-                        View Details
-                      </Button>
+                      <div className="flex flex-col gap-2">
+                        <Button onClick={() => navigate(`/listing/${item.listing_id}`)}
+                          size="sm">
+                          View Details
+                        </Button>
+                        {item.availability_status !== 'closed' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-green-700 border-green-300 hover:bg-green-50"
+                            disabled={closingListingId === item.listing_id}
+                            onClick={() => handleCloseListing(item.listing_id)}
+                          >
+                            {closingListingId === item.listing_id
+                              ? <Loader2 className="h-4 w-4 animate-spin" />
+                              : <><CheckSquare className="h-4 w-4 mr-1" /> Mark Closed</>}
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-red-600 border-red-200 hover:bg-red-50"
+                          disabled={deletingListingId === item.listing_id}
+                          onClick={() => handleDeleteListing(item.listing_id)}
+                        >
+                          {deletingListingId === item.listing_id
+                            ? <Loader2 className="h-4 w-4 animate-spin" />
+                            : <><Trash2 className="h-4 w-4 mr-1" /> Remove</>}
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

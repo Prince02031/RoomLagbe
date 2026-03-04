@@ -36,7 +36,13 @@ export const AdminController = {
       if (!apartment) {
         return res.status(404).json({ message: 'Apartment not found' });
       }
-      // TODO: Send notification to owner with rejection reason
+      NotificationModel.create({
+        user_id: apartment.owner_id,
+        type: 'verification_rejected',
+        title: 'Apartment Rejected',
+        message: reason ? `Your apartment listing was rejected: ${reason}` : 'Your apartment listing was rejected by admin.',
+        meta: { apartment_id: apartment.apartment_id },
+      }).catch(() => {});
       res.json({ message: 'Apartment rejected', apartment, reason });
     } catch (err) {
       next(err);
@@ -74,7 +80,16 @@ export const AdminController = {
       if (!listing) {
         return res.status(404).json({ message: 'Listing not found' });
       }
-      // TODO: Send notification to owner with rejection reason
+      const full = await ListingModel.findWithOwner(req.params.id);
+      if (full?.owner_id) {
+        NotificationModel.create({
+          user_id: full.owner_id,
+          type: 'verification_rejected',
+          title: 'Listing Rejected',
+          message: reason ? `Your listing was rejected: ${reason}` : 'Your listing was rejected by admin.',
+          meta: { listing_id: listing.listing_id },
+        }).catch(() => {});
+      }
       res.json({ message: 'Listing rejected', listing, reason });
     } catch (err) {
       next(err);
