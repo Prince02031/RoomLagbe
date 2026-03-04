@@ -10,13 +10,14 @@ export const BookingController = {
       console.log('Final booking data:', bookingData);
       const booking = await BookingService.createBooking(bookingData);
 
-      await NotificationModel.create({
+      // Non-blocking notification — does not affect booking response
+      NotificationModel.create({
         user_id: req.user.id,
         type: 'visit_request_submitted',
         title: 'Visit Request Sent',
         message: 'Your room visit request has been sent successfully.',
         meta: { booking_id: booking.booking_id, listing_id: booking.listing_id },
-      });
+      }).catch(err => console.warn('Notification creation skipped:', err.message));
 
       console.log('Booking created successfully:', booking);
       res.status(201).json(booking);
