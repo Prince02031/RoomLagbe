@@ -249,5 +249,3 @@ Auth: student-only (authenticated)
 
 ---
 
-If you want, I can also generate a separate `CHANGELOG.md` with a chronological, versioned format (`v0.x.x`) from this README.
-
