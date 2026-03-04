@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { MapContainer, TileLayer, Circle, CircleMarker, Popup, useMapEvents } from 'react-leaflet';
 import { BarChart3, Loader2, MapPin } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Navbar from '../../components/Navbar';
@@ -7,6 +8,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Slider } from '../../components/ui/slider';
 import listingService from '../../services/listing.service';
+import adminService from '../../services/admin.service';
 import { calculateDistance, formatCurrency } from '../../lib/utils';
 import { useApp } from '../../context/AppContext';
 import { toast } from 'sonner';
@@ -59,11 +61,32 @@ function groupAreaStats(listings) {
     .sort((a, b) => b.avgPrice - a.avgPrice);
 }
 
+function getHeatColor(price, minPrice, maxPrice) {
+  if (!price || minPrice === maxPrice) return '#f59e0b';
+  const ratio = (price - minPrice) / (maxPrice - minPrice);
+  if (ratio >= 0.8) return '#dc2626';
+  if (ratio >= 0.6) return '#ea580c';
+  if (ratio >= 0.4) return '#f59e0b';
+  if (ratio >= 0.2) return '#84cc16';
+  return '#16a34a';
+}
+
+function MapClickHandler({ onMove }) {
+  useMapEvents({
+    click(e) {
+      onMove([e.latlng.lat, e.latlng.lng]);
+    },
+  });
+  return null;
+}
+
 export default function AdminAnalyticsPage() {
   const { currentUser } = useApp();
 
   const [allListings, setAllListings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
   const [radiusKm, setRadiusKm] = useState(3);
   const [center, setCenter] = useState(DEFAULT_CENTER);
   const [locationSearch, setLocationSearch] = useState('');
@@ -92,6 +115,13 @@ export default function AdminAnalyticsPage() {
     };
 
     fetchAllListings();
+  }, []);
+
+  useEffect(() => {
+    adminService.getAnalyticsSummary()
+      .then(setSummary)
+      .catch(() => toast.error('Failed to load analytics summary'))
+      .finally(() => setSummaryLoading(false));
   }, []);
 
   useEffect(() => {
@@ -168,8 +198,16 @@ export default function AdminAnalyticsPage() {
     });
   }, [listingsWithCoords, center, radiusKm]);
 
-  const globalAreaStats = useMemo(() => groupAreaStats(allListings), [allListings]);
+  const globalAreaStats = summary?.areaStats ?? [];
   const radiusAreaStats = useMemo(() => groupAreaStats(listingsInRadius), [listingsInRadius]);
+
+  const { minPriceInRadius, maxPriceInRadius } = useMemo(() => {
+    const prices = listingsInRadius.map(l => getListingPrice(l)).filter(p => p > 0);
+    return {
+      minPriceInRadius: prices.length ? Math.min(...prices) : 0,
+      maxPriceInRadius: prices.length ? Math.max(...prices) : 0,
+    };
+  }, [listingsInRadius]);
 
   const highestAreaInRadius = radiusAreaStats.length ? radiusAreaStats[0] : null;
   const lowestAreaInRadius = radiusAreaStats.length ? radiusAreaStats[radiusAreaStats.length - 1] : null;
@@ -271,16 +309,94 @@ export default function AdminAnalyticsPage() {
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle>Area Map</CardTitle>
+            <p className="text-sm text-gray-500">Dots are color-coded by rent. Click anywhere to move the center.</p>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[480px] rounded-lg overflow-hidden border border-gray-200">
+              <MapContainer center={center} zoom={13} scrollWheelZoom style={{ height: '100%', width: '100%' }}>
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <MapClickHandler onMove={setCenter} />
+
+                <Circle
+                  center={center}
+                  radius={radiusKm * 1000}
+                  pathOptions={{ color: '#2563eb', fillColor: '#2563eb', fillOpacity: 0.07 }}
+                />
+
+                {listingsInRadius.map((listing) => {
+                  const price = getListingPrice(listing);
+                  const color = getHeatColor(price, minPriceInRadius, maxPriceInRadius);
+                  return (
+                    <CircleMarker
+                      key={listing.listing_id}
+                      center={[listing.latitude, listing.longitude]}
+                      radius={7}
+                      pathOptions={{ color, fillColor: color, fillOpacity: 0.85, weight: 2 }}
+                    >
+                      <Popup>
+                        <div className="text-sm space-y-1">
+                          <p className="font-semibold">{listing.apartment_title || listing.room_name || 'Listing'}</p>
+                          <p>{formatCurrency(price)}/person</p>
+                          <p className="text-gray-500">{getListingArea(listing)}</p>
+                          <p className="text-gray-500">{listing.listing_type}</p>
+                        </div>
+                      </Popup>
+                    </CircleMarker>
+                  );
+                })}
+
+                {listingsWithCoords
+                  .filter(l => !listingsInRadius.includes(l))
+                  .map((listing) => (
+                    <CircleMarker
+                      key={listing.listing_id}
+                      center={[listing.latitude, listing.longitude]}
+                      radius={4}
+                      pathOptions={{ color: '#9ca3af', fillColor: '#9ca3af', fillOpacity: 0.4, weight: 1 }}
+                    >
+                      <Popup>
+                        <div className="text-sm space-y-1">
+                          <p className="font-semibold">{listing.apartment_title || listing.room_name || 'Listing'}</p>
+                          <p>{formatCurrency(getListingPrice(listing))}/person</p>
+                          <p className="text-gray-500">{getListingArea(listing)}</p>
+                        </div>
+                      </Popup>
+                    </CircleMarker>
+                  ))}
+
+                <CircleMarker center={center} radius={7} pathOptions={{ color: '#1d4ed8', fillColor: '#1d4ed8', fillOpacity: 1, weight: 2 }}>
+                  <Popup>
+                    <p className="text-sm font-semibold">Center</p>
+                    <p className="text-xs text-gray-500">{center[0].toFixed(5)}, {center[1].toFixed(5)}</p>
+                  </Popup>
+                </CircleMarker>
+              </MapContainer>
+            </div>
+            <div className="flex gap-6 mt-3 text-xs text-gray-600">
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-green-600 inline-block" /> Low rent (in radius)</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-yellow-400 inline-block" /> Mid rent</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-red-600 inline-block" /> High rent</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-gray-400 inline-block" /> Outside radius</span>
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="grid md:grid-cols-3 gap-6">
           <Card>
             <CardHeader>
               <CardTitle>All Listings</CardTitle>
             </CardHeader>
             <CardContent>
-              {loading ? (
+              {summaryLoading ? (
                 <div className="flex items-center gap-2 text-gray-600"><Loader2 className="h-4 w-4 animate-spin" /> Loading...</div>
               ) : (
-                <p className="text-2xl font-semibold">{allListings.length}</p>
+                <p className="text-2xl font-semibold">{summary?.totalListings ?? 0}</p>
               )}
             </CardContent>
           </Card>

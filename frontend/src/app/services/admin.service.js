@@ -98,6 +98,15 @@ const adminService = {
             throw error.response?.data || error;
         }
     },
+
+    async getAnalyticsSummary() {
+        try {
+            const response = await api.get('/admin/analytics/summary');
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error;
+        }
+    },
 };
 
 export default adminService;

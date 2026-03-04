@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, Users, Heart, Check, X } from 'lucide-react';
+import { Home, Plus, Users, Heart, Check, X, Clock, CheckCircle, Eye } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
@@ -56,6 +56,10 @@ export default function StudentDashboard() {
 
   const initialTab = 'listings';
 
+  const pendingBookings = bookings.filter(b => b.status === 'pending');
+  const approvedBookings = bookings.filter(b => b.status === 'approved');
+  const rejectedBookings = bookings.filter(b => b.status === 'rejected');
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-20">
@@ -74,7 +78,7 @@ export default function StudentDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -91,10 +95,34 @@ export default function StudentDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">My Bookings</p>
+                <p className="text-sm text-gray-600">Total Requests</p>
                 <p className="text-2xl font-semibold mt-1">{bookings.length}</p>
               </div>
-              <Users className="h-10 w-10 text-green-600" />
+              <Users className="h-10 w-10 text-gray-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Pending</p>
+                <p className="text-2xl font-semibold mt-1 text-yellow-600">{pendingBookings.length}</p>
+              </div>
+              <Clock className="h-10 w-10 text-yellow-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Approved</p>
+                <p className="text-2xl font-semibold mt-1 text-green-600">{approvedBookings.length}</p>
+              </div>
+              <CheckCircle className="h-10 w-10 text-green-500" />
             </div>
           </CardContent>
         </Card>
@@ -159,6 +187,14 @@ export default function StudentDashboard() {
                               {item.availability_status}
                             </Badge>
                             {item.women_only && <Badge>Women Only</Badge>}
+                          </div>
+                          <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                            <span className="flex items-center gap-1">
+                              <Eye className="h-4 w-4" /> {item.view_count ?? 0} views
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Heart className="h-4 w-4" /> {item.wishlist_count ?? 0} wishlisted
+                            </span>
                           </div>
                         </div>
                       </div>

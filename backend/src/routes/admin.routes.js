@@ -24,4 +24,7 @@ router.get('/users/pending/owners', AdminController.getPendingOwners);
 router.patch('/users/:id/approve', AdminController.approveUser);
 router.patch('/users/:id/reject', AdminController.rejectUser);
 
+// Analytics
+router.get('/analytics/summary', AdminController.getAnalyticsSummary);
+
 export default router;

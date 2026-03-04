@@ -4,6 +4,7 @@ import { ApartmentModel } from '../models/apartment.model.js';
 import { RoomModel } from '../models/room.model.js';
 import { AmenityModel } from '../models/amenity.model.js';
 import { ListingPhotoModel } from '../models/listingPhoto.model.js';
+import { ApartmentMetricsModel } from '../models/apartmentMetrics.model.js';
 import supabase from '../config/supabase.js';
 import { config } from '../config/env.js';
 
@@ -27,6 +28,13 @@ export const ListingController = {
       if (!listing) {
         return res.status(404).json({ message: 'Listing not found' });
       }
+
+      // Non-blocking view count increment
+      if (listing.apartment_id) {
+        ApartmentMetricsModel.incrementViewCount(listing.apartment_id)
+          .catch(err => console.warn('View count increment failed:', err.message));
+      }
+
       const photos = await ListingPhotoModel.getByListing(id);
       const photoUrls = photos.map((photo) => photo.photo_url).filter(Boolean);
       const thumbnail = photos.find((photo) => photo.is_thumbnail)?.photo_url || photoUrls[0] || null;

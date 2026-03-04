@@ -178,13 +178,16 @@ export const ListingModel = {
       SELECT l.*, 
              COALESCE(a.title, ra.title) as apartment_title, 
              r.room_name,
-             COALESCE(loc.area_name, rloc.area_name) as location
+             COALESCE(loc.area_name, rloc.area_name) as location,
+             am.view_count,
+             am.wishlist_count
       FROM listing l
       LEFT JOIN apartment a ON l.apartment_id = a.apartment_id
       LEFT JOIN room r ON l.room_id = r.room_id
       LEFT JOIN apartment ra ON r.apartment_id = ra.apartment_id
       LEFT JOIN location loc ON a.location_id = loc.location_id
       LEFT JOIN location rloc ON ra.location_id = rloc.location_id
+      LEFT JOIN apartment_metrics am ON COALESCE(a.apartment_id, ra.apartment_id) = am.apartment_id
       WHERE a.owner_id = $1 OR ra.owner_id = $1 OR r.std_id = $1
       ORDER BY l.created_at DESC
     `;
