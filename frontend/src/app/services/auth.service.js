@@ -15,6 +15,7 @@ const authService = {
      * @param {string} userData.email - Email address
      * @param {string} userData.phone - Phone number
     * @param {string} userData.role - User role (student/owner/admin)
+    * @param {string} [userData.adminSecretKey] - Required when role is admin
      * @returns {Promise<Object>} User data
      */
     async register(userData) {

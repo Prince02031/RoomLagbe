@@ -139,7 +139,7 @@ export default function ProfilePage() {
                 <CardTitle>Account Information</CardTitle>
                 <div className="flex items-center space-x-2">
                   <Badge className="capitalize">{currentUser.role}</Badge>
-                  {currentUser.verified && (
+                  {currentUser.role !== 'admin' && currentUser.verified && (
                     <Badge variant="outline" className="text-green-600">
                       <CheckCircle className="h-4 w-4 mr-1" />
                       Verified
@@ -307,30 +307,32 @@ export default function ProfilePage() {
                   <span className="text-gray-600">Role</span>
                   <Badge className="capitalize">{currentUser?.role}</Badge>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Status</span>
-                  {currentUser?.verification_status === 'verified' ? (
-                    <Badge variant="outline" className="text-green-600">
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      Verified
-                    </Badge>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-gray-600">
-                        {currentUser?.verification_status === 'pending' ? 'Pending Verification' : 'Not Verified'}
+                {currentUser?.role !== 'admin' && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Status</span>
+                    {currentUser?.verification_status === 'verified' ? (
+                      <Badge variant="outline" className="text-green-600">
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Verified
                       </Badge>
-                      {(currentUser?.role === 'student' || currentUser?.role === 'owner') && currentUser?.verification_status !== 'pending' && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => navigate('/profile/verification')}
-                        >
-                          Apply for Verification
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-gray-600">
+                          {currentUser?.verification_status === 'pending' ? 'Pending Verification' : 'Not Verified'}
+                        </Badge>
+                        {(currentUser?.role === 'student' || currentUser?.role === 'owner') && currentUser?.verification_status !== 'pending' && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => navigate('/profile/verification')}
+                          >
+                            Apply for Verification
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

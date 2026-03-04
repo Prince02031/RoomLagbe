@@ -4,7 +4,7 @@ import { UserModel } from '../models/user.model.js';
 import { ROLES } from '../constants/roles.js';
 
 export const register = async (req, res) => {
-  const { username, password, name, email, phone, role } = req.body;
+  const { username, password, name, email, phone, role, adminSecretKey } = req.body;
 
   try {
     const normalizedRole = String(role || ROLES.STUDENT).toLowerCase();
@@ -12,6 +12,18 @@ export const register = async (req, res) => {
 
     if (!allowedRoles.includes(normalizedRole)) {
       return res.status(400).json({ message: 'Invalid role. Allowed roles: student, owner, admin' });
+    }
+
+    if (normalizedRole === ROLES.ADMIN) {
+      const configuredAdminSecret = process.env.ADMIN_SECRET_KEY;
+
+      if (!configuredAdminSecret) {
+        return res.status(500).json({ message: 'Admin registration is not configured on the server' });
+      }
+
+      if (!adminSecretKey || adminSecretKey !== configuredAdminSecret) {
+        return res.status(403).json({ message: 'Invalid admin secret key' });
+      }
     }
 
     // 1. Check if user exists (DB query)

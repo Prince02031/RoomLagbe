@@ -26,6 +26,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState('student');
+  const [adminSecretKey, setAdminSecretKey] = useState('');
   const [registerLoading, setRegisterLoading] = useState(false);
 
   const handleLogin = async (e) => {
@@ -46,6 +47,12 @@ export default function LoginPage() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
+
+    if (role === 'admin' && !adminSecretKey.trim()) {
+      toast.error('Admin secret key is required for admin registration.');
+      return;
+    }
+
     setRegisterLoading(true);
 
     try {
@@ -56,6 +63,7 @@ export default function LoginPage() {
         email,
         phone,
         role,
+        ...(role === 'admin' ? { adminSecretKey } : {}),
       };
 
       await register(userData);
@@ -72,6 +80,7 @@ export default function LoginPage() {
       setEmail('');
       setPhone('');
       setRole('student');
+      setAdminSecretKey('');
     } catch (error) {
       console.error('Registration error:', error);
       toast.error(error.message || 'Registration failed. Please try again.');
@@ -206,7 +215,12 @@ export default function LoginPage() {
                     <Label>I am a</Label>
                     <RadioGroup
                       value={role}
-                      onValueChange={(value) => setRole(value)}
+                      onValueChange={(value) => {
+                        setRole(value);
+                        if (value !== 'admin') {
+                          setAdminSecretKey('');
+                        }
+                      }}
                       className="mt-2"
                       disabled={registerLoading}
                     >
@@ -224,6 +238,22 @@ export default function LoginPage() {
                       </div>
                     </RadioGroup>
                   </div>
+
+                  {role === 'admin' && (
+                    <div>
+                      <Label>Admin Secret Key</Label>
+                      <Input
+                        type="password"
+                        value={adminSecretKey}
+                        onChange={(e) => setAdminSecretKey(e.target.value)}
+                        placeholder="Enter admin secret key"
+                        className="mt-2"
+                        required
+                        disabled={registerLoading}
+                      />
+                    </div>
+                  )}
+
                   <Button type="submit" className="w-full" disabled={registerLoading}>
                     {registerLoading ? 'Creating Account...' : 'Create Account'}
                   </Button>
