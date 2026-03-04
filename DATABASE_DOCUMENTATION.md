@@ -798,5 +798,221 @@ You should also create:
 1. **API_ENDPOINTS.md** - List all REST endpoints
 2. **TESTING_GUIDE.md** - Postman test scenarios
 3. **DEPLOYMENT_GUIDE.md** - How to deploy backend/frontend
+
+---
+
+## 🔄 Database Normalization Analysis
+
+### Overview
+
+The RoomLagbe database schema follows **3rd Normal Form (3NF)** with excellent normalization practices for data integrity and maintainability.
+
+---
+
+### ✅ 1st Normal Form (1NF) - Atomic Values
+
+**Requirements:**
+- All columns contain atomic (single) values
+- No repeating groups or arrays in columns
+- Each table has a primary key
+
+**Implementation:**
+- ✅ All tables use `UUID` primary keys
+- ✅ Photos stored in separate `listing_photo` table (not comma-separated string)
+- ✅ Amenities in junction tables, not as concatenated values
+- ✅ No multi-valued attributes in any column
+
+**Example:**
+```sql
+-- ❌ BAD (violates 1NF):
+apartment (id, photos: "img1.jpg,img2.jpg,img3.jpg")
+
+-- ✅ GOOD (1NF compliant):
+listing_photo (photo_id, listing_id, photo_url)
+```
+
+---
+
+### ✅ 2nd Normal Form (2NF) - No Partial Dependencies
+
+**Requirements:**
+- Must be in 1NF
+- All non-key attributes depend on the **entire** primary key (not just part of it)
+- Applies to tables with composite keys
+
+**Implementation:**
+
+Junction tables properly handle many-to-many relationships:
+
+```sql
+-- room_amenity: Both columns form the key, no partial dependencies
+room_amenity (
+  room_id,      -- Part of composite key
+  amenity_id    -- Part of composite key
+)
+PRIMARY KEY (room_id, amenity_id)
+
+-- apartment_amenity: Clean many-to-many mapping
+apartment_amenity (
+  apartment_id, -- Part of composite key
+  amenity_id    -- Part of composite key
+)
+PRIMARY KEY (apartment_id, amenity_id)
+
+-- wishlist: User can save many listings
+wishlist (
+  user_id,      -- Part of composite key
+  listing_id,   -- Part of composite key
+  added_at      -- Depends on BOTH user_id AND listing_id
+)
+PRIMARY KEY (user_id, listing_id)
+```
+
+**Why This Matters:**
+- No data depends on just `room_id` or just `amenity_id` alone
+- Removing a room removes all its amenities (CASCADE)
+- No update anomalies
+
+---
+
+### ✅ 3rd Normal Form (3NF) - No Transitive Dependencies
+
+**Requirements:**
+- Must be in 2NF
+- No non-key attribute depends on another non-key attribute
+- All attributes depend directly on the primary key
+
+**Implementation Examples:**
+
+#### 1. Location Normalization
+**Good:** Location data stored once, prevents coordinate duplication
+```sql
+apartment (
+  apartment_id,
+  location_id → location(latitude, longitude, area_name)
+)
+
+-- Multiple apartments can share the same location
+-- If coordinates change, update once in location table
+```
+
+**Why 3NF:** `area_name`, `latitude`, `longitude` don't transitively depend through apartment—they're in their own table.
+
+---
+
+#### 2. University Normalization
+**Good:** University coordinates centralized
+```sql
+university (university_id, name, latitude, longitude, geog)
+commute_time (commute_id, university_id → university)
+
+-- Distance calculations reference university table
+-- No duplicate university data across commute records
+```
+
+---
+
+#### 3. User Normalization
+**Good:** User details stored once
+```sql
+user (user_id, username, email, phone, role)
+apartment (apartment_id, owner_id → user)
+room (room_id, std_id → user)
+booking (booking_id, std_id → user)
+
+-- If user changes email, update once in user table
+-- All apartments/rooms/bookings reflect the change
+```
+
+---
+
+#### 4. Amenity Normalization
+**Good:** Amenity names stored once, shared across properties
+```sql
+amenity (amenity_id, name)
+apartment_amenity (apartment_id, amenity_id)
+room_amenity (room_id, amenity_id)
+
+-- "Wi-Fi" stored once in amenity table
+-- Referenced by multiple apartments and rooms
+-- Rename "Wi-Fi" → "High-Speed Internet" updates everywhere
+```
+
+---
+
+### 🎯 Minor Denormalization (Acceptable for Performance)
+
+While the schema is normalized, there are **intentional** denormalizations for query optimization:
+
+#### 1. Price Duplication
+```sql
+apartment.price_per_person    -- Source of truth
+room.price_per_person         -- Source of truth
+listing.price_per_person      -- DUPLICATED for fast filtering
+```
+
+**Reason:** 
+- Listing search/filter queries are frequent
+- Avoids JOINing apartment or room tables for every search
+- Trade-off: Slightly harder updates vs. much faster reads
+
+**Maintained By:** Application logic ensures consistency during creation/updates
+
+---
+
+#### 2. Apartment Metrics (Materialized View Pattern)
+```sql
+apartment_metrics (
+  apartment_id,
+  fair_rent_score,    -- Calculated periodically
+  view_count,         -- Aggregated data
+  wishlist_count,     -- Aggregated data
+  last_calculated
+)
+```
+
+**Reason:**
+- Fair rent calculation is expensive (complex algorithm)
+- View/wishlist counts would require `COUNT(*)` on every query
+- Pre-calculated scores enable fast listing comparisons
+
+**Maintained By:** Background jobs and triggers
+
+---
+
+### 📊 Normalization Benefits in RoomLagbe
+
+| Benefit | Example in RoomLagbe |
+|---------|---------------------|
+| **Data Integrity** | User email change updates once, reflects everywhere |
+| **No Update Anomalies** | Changing university coordinates updates all commute calculations |
+| **No Insertion Anomalies** | Can add amenity without needing an apartment first |
+| **No Deletion Anomalies** | Deleting apartment doesn't lose location data (used by others) |
+| **Storage Efficiency** | Location "Mohammadpur" stored once, referenced 100+ times |
+| **Maintainability** | Amenity rename updates all apartments/rooms automatically |
+
+---
+
+### 🔍 Normalization Verification Checklist
+
+- ✅ **1NF:** All columns atomic, all tables have primary keys
+- ✅ **2NF:** No partial dependencies in composite key tables
+- ✅ **3NF:** No transitive dependencies (no non-key → non-key)
+- ✅ **Intentional denormalization documented** (listing.price_per_person, apartment_metrics)
+- ✅ **Foreign key constraints** enforce referential integrity
+- ✅ **CASCADE rules** prevent orphaned records
+- ✅ **Triggers maintain** computed values (geog, updated_at)
+
+---
+
+### 🎓 Academic Notes
+
+For your database course documentation:
+
+1. **Normalization Level:** 3NF (Third Normal Form)
+2. **Denormalization Strategy:** Performance-driven (documented trade-offs)
+3. **Integrity Enforcement:** Constraints + triggers + application logic
+4. **BCNF Status:** Nearly BCNF (no non-trivial functional dependencies violate BCNF)
+5. **Design Pattern:** Hybrid - normalized core with controlled denormalization for read-heavy operations
 4. **USER_MANUAL.md** - How to use the app
 5. **DATABASE_BACKUP.md** - Backup/restore procedures

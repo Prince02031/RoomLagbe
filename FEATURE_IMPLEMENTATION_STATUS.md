@@ -300,21 +300,21 @@ Your teammate has successfully implemented **all Phase 1 & Phase 2** features fr
 
 ### From Integration Analysis Document
 
-| Feature | Planned (Phase) | Implemented | Status |
-|---------|----------------|-------------|--------|
-| API Service Layer | Phase 1 | ✅ | 100% |
-| Authentication | Phase 1 | ✅ | 100% |
-| Listings Integration | Phase 1 | ✅ | 100% |
-| Amenities Integration | Phase 1 | ✅ | 100% |
-| Wishlist | Phase 1 | ✅ | 100% |
-| Bookings | Phase 1 | ✅ | 100% |
-| Location Dropdown | Phase 2 | ✅ | 100% |
-| Create Apartment | Phase 2 | ✅ | 100% |
-| Create Room | Phase 2 | ✅ | 100% |
-| Create Listing + Amenities | Phase 2 | ✅ | 100% |
-| OpenStreetMap Picker | Phase 3 | ❌ | 0% |
-| Map View in Search | Phase 3 | ❌ | 0% |
-| Map on Details | Phase 3 | ❌ | 0% |
+| Feature                    | Planned (Phase) | Implemented | Status |
+| -------------------------- | --------------- | ----------- | ------ |
+| API Service Layer          | Phase 1         | ✅           | 100%   |
+| Authentication             | Phase 1         | ✅           | 100%   |
+| Listings Integration       | Phase 1         | ✅           | 100%   |
+| Amenities Integration      | Phase 1         | ✅           | 100%   |
+| Wishlist                   | Phase 1         | ✅           | 100%   |
+| Bookings                   | Phase 1         | ✅           | 100%   |
+| Location Dropdown          | Phase 2         | ✅           | 100%   |
+| Create Apartment           | Phase 2         | ✅           | 100%   |
+| Create Room                | Phase 2         | ✅           | 100%   |
+| Create Listing + Amenities | Phase 2         | ✅           | 100%   |
+| OpenStreetMap Picker       | Phase 3         | ❌           | 0%     |
+| Map View in Search         | Phase 3         | ❌           | 0%     |
+| Map on Details             | Phase 3         | ❌           | 0%     |
 
 ---
 
